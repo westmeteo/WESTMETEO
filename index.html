@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@WESTMETEO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background: #0b1626;
+            color: #e0e8f0;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 20px 40px;
+            border-bottom: 2px solid #1a3050;
+            background: linear-gradient(180deg, #0f2035 0%, #0b1626 100%);
+        }
+
+        header h1 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 3.2rem;
+            font-weight: 700;
+            letter-spacing: 6px;
+            color: #ffffff;
+        }
+
+        header p {
+            margin-top: 10px;
+            font-size: 0.95rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #5a8ab5;
+        }
+
+        main {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+
+        .prevision {
+            background: #101e30;
+            border-left: 4px solid #3a7bd5;
+            border-radius: 4px;
+            padding: 24px 28px;
+            margin-bottom: 24px;
+            transition: background 0.2s;
+        }
+
+        .prevision:hover {
+            background: #142538;
+        }
+
+        .prevision h2 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #ffffff;
+            margin-bottom: 6px;
+        }
+
+        .prevision .fecha {
+            font-size: 0.85rem;
+            color: #5a8ab5;
+            margin-bottom: 14px;
+        }
+
+        .prevision a {
+            display: inline-block;
+            color: #3a7bd5;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 8px 20px;
+            border: 1px solid #3a7bd5;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+
+        .prevision a:hover {
+            background: #3a7bd5;
+            color: #ffffff;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #2a4a6a;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>@WESTMETEO</h1>
+        <p>Meteorología de montaña · Sistema Central Oeste</p>
+    </header>
+
+    <main>
+
+        <!-- ============================================
+             INSTRUCCIONES PARA AÑADIR NUEVAS PREVISIONES
+             ============================================
+             
+             1. Sube tu PDF al repositorio (Add file → Upload files)
+             2. Copia el bloque de abajo y pégalo AQUÍ ARRIBA,
+                ANTES de las previsiones anteriores.
+             3. Cambia el título, la fecha y el nombre del PDF.
+             
+             PLANTILLA PARA COPIAR Y PEGAR:
+
+             <div class="prevision">
+                 <h2>Predicción XX-XX de Mes</h2>
+                 <p class="fecha">Publicado: XX de mes de 2025</p>
+                 <a href="nombre_del_archivo.pdf" target="_blank">📄 Descargar PDF</a>
+             </div>
+
+             ============================================ -->
+
+        <div class="prevision">
+            <h2>Predicción 13–15 de Febrero</h2>
+            <p class="fecha">Publicado: 12 de febrero de 2025</p>
+            <a href="prevision_13-15_feb.pdf" target="_blank">📄 Descargar PDF</a>
+        </div>
+
+    </main>
+
+    <footer>
+        @WESTMETEO · Sierra de Béjar · Sistema Central Oeste
+    </footer>
+
+</body>
+</html>
