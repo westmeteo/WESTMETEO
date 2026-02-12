@@ -4,98 +4,176 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@WESTMETEO</title>
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Source Sans 3', sans-serif;
-            background: #0b1626;
-            color: #e0e8f0;
+            background: #263d52;
+            color: #d5e1ec;
             min-height: 100vh;
         }
 
+        /* === HEADER === */
         header {
             text-align: center;
-            padding: 60px 20px 40px;
-            border-bottom: 2px solid #1a3050;
-            background: linear-gradient(180deg, #0f2035 0%, #0b1626 100%);
+            padding: 70px 20px 50px;
+            background: linear-gradient(180deg, #325170 0%, #2d4662 40%, #263d52 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 100'%3E%3Cpolygon points='0,100 150,40 300,75 500,20 650,60 800,10 950,50 1100,30 1200,55 1200,100' fill='%23263d52'/%3E%3C/svg%3E");
+            background-size: cover;
+            background-position: bottom;
         }
 
         header h1 {
             font-family: 'Oswald', sans-serif;
-            font-size: 3.2rem;
+            font-size: 3.5rem;
             font-weight: 700;
-            letter-spacing: 6px;
+            letter-spacing: 8px;
             color: #ffffff;
+            position: relative;
+            z-index: 1;
         }
 
-        header p {
-            margin-top: 10px;
-            font-size: 0.95rem;
-            letter-spacing: 3px;
+        header .tagline {
+            margin-top: 8px;
+            font-size: 0.9rem;
+            letter-spacing: 4px;
             text-transform: uppercase;
-            color: #5a8ab5;
+            color: #7eb3d8;
+            position: relative;
+            z-index: 1;
         }
 
+        /* === CONTENEDOR PRINCIPAL === */
         main {
-            max-width: 720px;
+            max-width: 760px;
             margin: 0 auto;
             padding: 40px 20px 80px;
         }
 
-        .prevision {
-            background: #101e30;
-            border-left: 4px solid #3a7bd5;
-            border-radius: 4px;
-            padding: 24px 28px;
+        .section-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: #5ea0cc;
             margin-bottom: 24px;
-            transition: background 0.2s;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #334f68;
+        }
+
+        /* === PREVISIONES === */
+        .prevision {
+            background: linear-gradient(135deg, #2b4a63 0%, #284460 100%);
+            border-left: 4px solid #3a7bd5;
+            border-radius: 6px;
+            padding: 24px 28px;
+            margin-bottom: 20px;
+            transition: all 0.25s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
         }
 
         .prevision:hover {
-            background: #142538;
+            background: linear-gradient(135deg, #305572 0%, #2c4e6a 100%);
+            transform: translateX(4px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
         }
 
         .prevision h2 {
             font-family: 'Oswald', sans-serif;
-            font-size: 1.3rem;
+            font-size: 1.25rem;
             font-weight: 700;
             letter-spacing: 2px;
             text-transform: uppercase;
             color: #ffffff;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
         .prevision .fecha {
-            font-size: 0.85rem;
-            color: #5a8ab5;
-            margin-bottom: 14px;
+            font-size: 0.82rem;
+            color: #6fa3c8;
+            margin-bottom: 16px;
         }
 
         .prevision a {
-            display: inline-block;
-            color: #3a7bd5;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #4a9be0;
             text-decoration: none;
             font-weight: 600;
-            font-size: 0.95rem;
-            padding: 8px 20px;
-            border: 1px solid #3a7bd5;
-            border-radius: 3px;
-            transition: all 0.2s;
+            font-size: 0.9rem;
+            padding: 8px 22px;
+            border: 1px solid #3a80c4;
+            border-radius: 4px;
+            transition: all 0.2s ease;
         }
 
         .prevision a:hover {
             background: #3a7bd5;
             color: #ffffff;
+            border-color: #3a7bd5;
         }
 
+        /* === ÚLTIMA PREDICCIÓN (destacada) === */
+        .prevision.destacada {
+            border-left-width: 5px;
+            border-left-color: #48b5e0;
+            background: linear-gradient(135deg, #2d5070 0%, #294a65 100%);
+        }
+
+        /* === ABOUT === */
+        .about {
+            padding: 36px 30px;
+            margin: 40px 0;
+            background: linear-gradient(135deg, #2b4a63 0%, #274260 100%);
+            border-top: 3px solid #3a7bd5;
+            border-bottom: 1px solid #334f68;
+            border-radius: 6px;
+        }
+
+        .about p {
+            font-size: 0.92rem;
+            line-height: 1.8;
+            color: #a3c0d8;
+            text-align: justify;
+        }
+
+        .about strong {
+            color: #d0e4f4;
+        }
+
+        /* === FOOTER === */
         footer {
             text-align: center;
-            padding: 30px;
-            color: #2a4a6a;
-            font-size: 0.8rem;
-            letter-spacing: 1px;
+            padding: 30px 20px;
+            color: #3d5f7a;
+            font-size: 0.78rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-top: 1px solid #2e4b62;
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 600px) {
+            header h1 { font-size: 2.4rem; letter-spacing: 5px; }
+            header .tagline { font-size: 0.75rem; letter-spacing: 2px; }
+            .about { padding: 28px 20px; }
+            .about p { font-size: 0.88rem; }
+            .prevision { padding: 20px; }
         }
     </style>
 </head>
@@ -103,35 +181,70 @@
 
     <header>
         <h1>@WESTMETEO</h1>
-        <p>Meteorología de montaña · Sistema Central Oeste</p>
+        <p class="tagline">Meteorología de montaña · Sistema Central Oeste</p>
     </header>
 
     <main>
 
-        <!-- ============================================
-             INSTRUCCIONES PARA AÑADIR NUEVAS PREVISIONES
-             ============================================
-             
-             1. Sube tu PDF al repositorio (Add file → Upload files)
-             2. Copia el bloque de abajo y pégalo AQUÍ ARRIBA,
-                ANTES de las previsiones anteriores.
-             3. Cambia el título, la fecha y el nombre del PDF.
-             
-             PLANTILLA PARA COPIAR Y PEGAR:
+        <!-- =============================================
+             ÚLTIMA PREDICCIÓN
+             =============================================
+             Cuando publiques una nueva predicción:
+             1. Mueve el bloque "destacada" actual abajo,
+                a la sección de ANTERIORES (y quítale la
+                clase "destacada").
+             2. Pon aquí la nueva con clase "destacada".
 
-             <div class="prevision">
-                 <h2>Predicción XX-XX de Mes</h2>
-                 <p class="fecha">Publicado: XX de mes de 2025</p>
+             PLANTILLA:
+
+             <div class="prevision destacada">
+                 <h2>Predicción XX–XX de Mes</h2>
+                 <p class="fecha">Publicado: XX de mes de 2026</p>
                  <a href="nombre_del_archivo.pdf" target="_blank">📄 Descargar PDF</a>
              </div>
 
-             ============================================ -->
+             ============================================= -->
 
-        <div class="prevision">
+        <h2 class="section-title">Última predicción</h2>
+
+        <div class="prevision destacada">
             <h2>Predicción 13–15 de Febrero</h2>
-            <p class="fecha">Publicado: 12 de febrero de 2025</p>
+            <p class="fecha">Publicado: 12 de febrero de 2026</p>
             <a href="prevision_13-15_feb.pdf" target="_blank">📄 Descargar PDF</a>
         </div>
+
+
+        <!-- =============================================
+             BLOQUE INFORMATIVO (no tocar)
+             ============================================= -->
+
+        <div class="about">
+            <p>
+                <strong>@WESTMETEO</strong> es un servicio meteorológico independiente y privado especializado en el análisis mesoscalar del Sistema Central Oeste y la Sierra de Béjar. Nuestras predicciones se generan mediante un enfoque inductivo, integrando las salidas de modelos numéricos de predicción (NWP) como HARMONIE-AROME, GFS y ECMWF con bases de datos propias de observación local alimentadas durante años de seguimiento microclimático de estas sierras. En esencia, contrastamos la modelización sinóptica y mesoescalar con el comportamiento real observado en altitud, lo que nos permite afinar pronósticos donde los modelos generalistas suelen patinar — especialmente en fenómenos orográficos, inversiones térmicas y gradientes de precipitación. Dicho esto, <strong>@WESTMETEO</strong> es un proyecto personal y no constituye una fuente oficial de información meteorológica. <strong>No nos hacemos responsables de las decisiones tomadas en base a nuestras predicciones.</strong> Úsalas como una herramienta complementaria para planificar tus actividades en montaña, pero contrasta siempre con fuentes oficiales (AEMET, Météo-France) y, sobre todo, aplica el sentido común en el terreno. ¡Nos vemos en la nieve! 🏔️
+            </p>
+        </div>
+
+
+        <!-- =============================================
+             PREDICCIONES ANTERIORES
+             =============================================
+             Aquí van las predicciones antiguas.
+             Cuando añadas una nueva arriba, mueve la que
+             estaba destacada aquí (sin clase "destacada").
+
+             Ejemplo:
+
+             <div class="prevision">
+                 <h2>Predicción 13–15 de Febrero</h2>
+                 <p class="fecha">Publicado: 12 de febrero de 2026</p>
+                 <a href="prevision_13-15_feb.pdf" target="_blank">📄 Descargar PDF</a>
+             </div>
+
+             ============================================= -->
+
+        <h2 class="section-title">Predicciones anteriores</h2>
+
+        <!-- (Aún no hay predicciones anteriores) -->
 
     </main>
 
