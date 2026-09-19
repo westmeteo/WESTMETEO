@@ -15,6 +15,10 @@
  .banner{height:300px;background:#20374f url('banner.jpg') center/cover no-repeat}
  .tagband{text-align:center;padding:15px 20px;background:#22384c;border-bottom:1px solid #33506b}
  .tagband .tagline{font-size:.92rem;letter-spacing:4px;text-transform:uppercase;color:#7eb3d8}
+ .ig{display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:.82rem;font-weight:600;
+   color:#e6eef6;text-decoration:none;opacity:.95;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+ .ig:hover{color:#fff;opacity:1}
+ .ig svg{width:16px;height:16px}
 
  /* NAV PESTAÑAS */
  nav{position:sticky;top:0;z-index:30;display:flex;justify-content:center;gap:4px;flex-wrap:wrap;
@@ -34,8 +38,9 @@
  .selector label{font-family:'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#7fa7c6;font-size:.85rem}
  select{font-family:'Source Sans 3',sans-serif;font-size:1rem;background:#2b4a63;color:#eaf2f8;border:1px solid #3a80c4;
    border-radius:6px;padding:9px 14px;min-width:230px;cursor:pointer}
- .fuente{font-size:.78rem;color:#6c93b3;margin:6px 0 22px}
+ .fuente{font-size:.78rem;color:#6c93b3;margin:6px 0 14px}
  .fuente b{color:#8fd0ff}
+ .beta{display:inline-block;background:#c96a2b;color:#fff;font-size:.62rem;font-weight:700;letter-spacing:1px;padding:1px 7px;border-radius:10px;vertical-align:middle}
 
  /* PREVISION */
  .dia{font-family:'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#cfe3f4;font-size:.95rem;
@@ -57,7 +62,7 @@
  .nubes .rell{height:100%;border-radius:3px}
  .rell.baja{background:#4a9be0}.rell.media{background:#7fb8e6}.rell.alta{background:#bcd8ef}
  .cabnubes{font-size:.62rem;color:#6c93b3;text-transform:uppercase;letter-spacing:1px}
- #estado{padding:26px 0;text-align:center;color:#7fa7c6}
+ #estado{padding:16px 0;text-align:center;color:#7fa7c6}
 
  /* PARTES */
  .prevision{background:linear-gradient(135deg,#2b4a63,#284460);border-left:4px solid #3a7bd5;border-radius:6px;
@@ -112,6 +117,10 @@
   <div class="banner" id="banner">
     <h1>@WESTMETEO</h1>
     <p class="tagline">Meteorología de montaña · Sistema Central Oeste</p>
+    <a class="ig" href="https://www.instagram.com/westmeteo" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2c3.2 0 3.6 0 4.9.07 1.17.05 1.8.25 2.23.42.56.22.96.48 1.38.9.42.42.68.82.9 1.38.17.42.37 1.06.42 2.23.06 1.27.07 1.65.07 4.85s0 3.58-.07 4.85c-.05 1.17-.25 1.8-.42 2.23a3.7 3.7 0 0 1-.9 1.38 3.7 3.7 0 0 1-1.38.9c-.42.17-1.06.37-2.23.42-1.27.06-1.65.07-4.85.07s-3.58 0-4.85-.07c-1.17-.05-1.8-.25-2.23-.42a3.7 3.7 0 0 1-1.38-.9 3.7 3.7 0 0 1-.9-1.38c-.17-.42-.37-1.06-.42-2.23C2.21 15.58 2.2 15.2 2.2 12s0-3.58.07-4.85c.05-1.17.25-1.8.42-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.17 1.06-.37 2.23-.42C8.42 2.21 8.8 2.2 12 2.2zm0 1.8c-3.14 0-3.51.01-4.75.07-.9.04-1.38.19-1.7.32-.43.16-.74.36-1.06.68-.32.32-.52.63-.68 1.06-.13.32-.28.8-.32 1.7-.06 1.24-.07 1.61-.07 4.75s.01 3.51.07 4.75c.04.9.19 1.38.32 1.7.16.43.36.74.68 1.06.32.32.63.52 1.06.68.32.13.8.28 1.7.32 1.24.06 1.61.07 4.75.07s3.51-.01 4.75-.07c.9-.04 1.38-.19 1.7-.32.43-.16.74-.36 1.06-.68.32-.32.52-.63.68-1.06.13-.32.28-.8.32-1.7.06-1.24.07-1.61.07-4.75s-.01-3.51-.07-4.75c-.04-.9-.19-1.38-.32-1.7a2.85 2.85 0 0 0-.68-1.06 2.85 2.85 0 0 0-1.06-.68c-.32-.13-.8-.28-1.7-.32C15.51 4.01 15.14 4 12 4zm0 3.06a4.94 4.94 0 1 1 0 9.88 4.94 4.94 0 0 1 0-9.88zm0 8.15a3.21 3.21 0 1 0 0-6.42 3.21 3.21 0 0 0 0 6.42zm6.3-8.35a1.15 1.15 0 1 1-2.3 0 1.15 1.15 0 0 1 2.3 0z"/></svg>
+      @westmeteo
+    </a>
   </div>
 </header>
 
@@ -130,7 +139,7 @@
       <label for="loc">Localidad</label>
       <select id="loc"></select>
     </div>
-    <p class="fuente">Próximas 48 h · modelo <b>AROME</b> (Météo-France) vía Open-Meteo. Sesgos @westmeteo próximamente.</p>
+    <p class="fuente">Próximas 48 h · <b>AROME</b> × Modelo propio <b>WM0.2</b> (sesgos microclimáticos) · <span class="beta">BETA</span></p>
     <div id="estado">Cargando previsión…</div>
     <div id="tabla"></div>
   </section>
@@ -259,7 +268,7 @@ function barra(et,v){
 async function cargar(){
   const loc=locSeleccionada(); if(!loc)return;
   document.getElementById('tabla').innerHTML='';
-  document.getElementById('estado').textContent='Cargando previsión…';
+  const _est=document.getElementById('estado'); _est.style.display='block'; _est.textContent='Cargando previsión…';
   const clave=loc.n;
   try{
     let d=cache[clave];
@@ -314,8 +323,10 @@ function render(d,loc){
     </div>`;
     filas++;
   }
-  document.getElementById('estado').textContent = filas ? '' : 'Sin datos para esta localidad ahora mismo.';
-  if(d._auto && filas) document.getElementById('estado').innerHTML='<span style="font-size:.8rem;color:#e0994a">AROME no cubre este punto; mostrando modelo automático.</span>';
+  const est=document.getElementById('estado');
+  if(filas && !d._auto){ est.style.display='none'; est.textContent=''; }
+  else if(filas && d._auto){ est.style.display='block'; est.innerHTML='<span style="font-size:.8rem;color:#e0994a">AROME no cubre este punto; mostrando modelo automático.</span>'; }
+  else { est.style.display='block'; est.textContent='Sin datos para esta localidad ahora mismo.'; }
   document.getElementById('tabla').innerHTML=html;
 }
 
