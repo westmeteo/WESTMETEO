@@ -52,6 +52,7 @@ const MAX=Math.max(BASE.W,BASE.H), relieve=(P.zmax-P.zmin)*P.exag;
 const scene=new THREE.Scene();
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0xbcd4e6);   // fondo azul (= niebla) para que al alejar no se vea el negro del render
 renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.02;
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
