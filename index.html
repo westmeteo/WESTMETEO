@@ -65,6 +65,20 @@
  .cabnubes{font-size:.62rem;color:#6c93b3;text-transform:uppercase;letter-spacing:1px}
  #estado{padding:16px 0;text-align:center;color:#7fa7c6}
 
+ /* ESTACION */
+ .est-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+ .est-top h2{font-family:'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#fff;font-size:1.15rem}
+ .est-live{font-size:.68rem;letter-spacing:2px;color:#bfeccc;background:#1f4a35;border:1px solid #2f7a52;border-radius:20px;padding:3px 11px;text-transform:uppercase}
+ .est-live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#4be08a;margin-right:6px;vertical-align:middle;box-shadow:0 0 6px #4be08a}
+ .est-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+ .est-card{background:linear-gradient(135deg,#2b4a63,#284460);border:1px solid #33506b;border-left:4px solid #3a7bd5;border-radius:10px;padding:18px 20px}
+ .est-card h3{font-family:'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#8fd0ff;font-size:.9rem;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #33506b}
+ .est-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:5px 0;font-size:.92rem}
+ .est-row .lab{color:#a3c0d8}
+ .est-row .val{color:#fff;font-weight:600;white-space:nowrap}
+ .est-row.big .val{font-size:1.55rem}
+ .est-row .u{font-size:.72rem;color:#7fa7c6;font-weight:400;margin-left:3px}
+
  /* PARTES */
  .prevision{background:linear-gradient(135deg,#2b4a63,#284460);border-left:4px solid #3a7bd5;border-radius:6px;
    padding:22px 26px;margin-bottom:18px;transition:all .25s;box-shadow:0 2px 8px rgba(0,0,0,.12)}
@@ -109,6 +123,7 @@
    .franja{grid-template-columns:44px 32px 46px 1fr 50px 60px;gap:5px;padding:7px 8px}
    .fi{font-size:1.1rem}.ft{font-size:.95rem}.fv{font-size:.72rem}
    .visores{grid-template-columns:1fr}
+   .est-cards{grid-template-columns:1fr}
  }
 </style>
 </head>
@@ -127,6 +142,7 @@
 
 <nav>
   <button class="activa" data-tab="prevision">Previsión</button>
+  <button data-tab="estacion">Estaciones</button>
   <button data-tab="partes">Partes</button>
   <button data-tab="visores">Visores</button>
   <button data-tab="contacto">Contacto</button>
@@ -143,6 +159,21 @@
     <p class="fuente">Próximas 48 h · <b>AROME</b> × Modelo propio <b>WM0.2</b> (sesgos microclimáticos) · <span class="beta">BETA</span></p>
     <div id="estado">Cargando previsión…</div>
     <div id="tabla"></div>
+  </section>
+
+  <!-- ESTACIONES -->
+  <section class="panel" id="estacion">
+    <div class="est-top">
+      <h2 id="estNombre">Estaciones</h2>
+      <span class="est-live">En directo</span>
+    </div>
+    <div class="selector">
+      <label for="estSel">Estación</label>
+      <select id="estSel"></select>
+    </div>
+    <p class="fuente">Observación propia · red de estaciones @westmeteo · <span class="beta">BETA</span></p>
+    <div id="estCards" class="est-cards"></div>
+    <p class="fuente" id="estPie" style="margin-top:16px">Cargando estaciones…</p>
   </section>
 
   <!-- PARTES -->
@@ -333,6 +364,58 @@ function render(d,loc){
 
 sel.addEventListener('change',cargar);
 cargar();
+
+/* === ESTACIONES (red Ecowitt @westmeteo, ya corregidas en el servidor) === */
+const estCards=document.getElementById('estCards');
+const estSel=document.getElementById('estSel');
+let estActual=null, estTimer=null;
+
+async function cargarEstacion(id){
+  try{
+    const r=await fetch('estacion.php?est='+encodeURIComponent(id),{cache:'no-store'});
+    const d=await r.json();
+    if(!d.ok){ document.getElementById('estPie').textContent='La estación no responde ahora mismo. Reintentando…'; return; }
+    document.getElementById('estNombre').textContent='Estación '+d.station;
+    let html='';
+    for(const g of d.groups){
+      html+='<div class="est-card"><h3>'+g.title+'</h3>';
+      for(const it of g.items){
+        const u=it.unit?'<span class="u">'+it.unit+'</span>':'';
+        html+='<div class="est-row'+(it.big?' big':'')+'"><span class="lab">'+it.label+'</span><span class="val">'+it.value+u+'</span></div>';
+      }
+      html+='</div>';
+    }
+    estCards.innerHTML=html;
+    const corr=d.corrected?' · valores corregidos (sesgos WM)':'';
+    document.getElementById('estPie').innerHTML='Actualizado: '+(d.time||'ahora')+corr+' · fuente: red @westmeteo';
+  }catch(e){
+    document.getElementById('estPie').textContent='No se pudo cargar la estación.';
+  }
+}
+
+function refrescoEstacion(){
+  if(estTimer) clearInterval(estTimer);
+  estTimer=setInterval(()=>{ if(estActual) cargarEstacion(estActual); }, 300000); // 5 min
+}
+
+async function iniciarEstaciones(){
+  try{
+    const r=await fetch('estacion.php?list=1',{cache:'no-store'});
+    const l=await r.json();
+    if(!l.ok || !l.estaciones || !l.estaciones.length){
+      document.getElementById('estPie').textContent='No hay estaciones configuradas.'; return;
+    }
+    estSel.innerHTML=l.estaciones.map(e=>'<option value="'+e.id+'">'+e.nombre+'</option>').join('');
+    estActual=l.estaciones[0].id;
+    estSel.value=estActual;
+    estSel.addEventListener('change',()=>{ estActual=estSel.value; cargarEstacion(estActual); });
+    cargarEstacion(estActual);
+    refrescoEstacion();
+  }catch(e){
+    document.getElementById('estPie').textContent='No se pudo cargar la lista de estaciones.';
+  }
+}
+iniciarEstaciones();
 
 /* === CONTACTO (envío por PHP, con aviso sin recargar) === */
 const fc=document.getElementById('fcontacto');

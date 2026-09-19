@@ -1,0 +1,15 @@
+{
+  "_ayuda": "Sesgos por estacion. Clave = id de la estacion (igual que en estacion_config.php). Por sensor: valor_mostrado = valor_bruto * factor + offset. factor 1 y offset 0 = sin correccion. 'windows' (opcional) define franjas horarias [from,to) que mandan sobre el factor por defecto; la hora es local (Europe/Madrid). Para anadir un amigo, copia un bloque con su id y pon sus factores.",
+  "bejar": {
+    "temp":     { "factor": 0.97, "offset": 0, "windows": [ { "from": "06:00", "to": "10:00", "factor": 0.94, "offset": 0 } ] },
+    "feels":    { "factor": 1, "offset": 0 },
+    "humidity": { "factor": 1, "offset": 0 },
+    "dew":      { "factor": 1, "offset": 0 },
+    "wind":     { "factor": 1, "offset": 0 },
+    "gust":     { "factor": 1, "offset": 0 },
+    "rain":     { "factor": 1.2, "offset": 0 },
+    "pressure": { "factor": 1, "offset": 0 },
+    "solar":    { "factor": 1, "offset": 0 },
+    "uv":       { "factor": 1, "offset": 0 }
+  }
+}
