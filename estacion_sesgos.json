@@ -3,12 +3,12 @@
   "bejar": {
     "temp":     { "factor": 0.97, "offset": 0, "windows": [ { "from": "06:00", "to": "10:00", "factor": 0.94, "offset": 0 } ] },
     "feels":    { "factor": 1, "offset": 0 },
-    "humidity": { "factor": 1, "offset": 0 },
+    "humidity": { "factor": 1.04, "offset": 0 },
     "dew":      { "factor": 1, "offset": 0 },
     "wind":     { "factor": 1, "offset": 0 },
     "gust":     { "factor": 1, "offset": 0 },
     "rain":     { "factor": 1.2, "offset": 0 },
-    "pressure": { "factor": 1, "offset": 0 },
+    "pressure": { "factor": 1, "offset": 0, "ranges": [ { "gt": 1013, "factor": 0.9996 }, { "lte": 1013, "factor": 0.999 } ] },
     "solar":    { "factor": 1, "offset": 0 },
     "uv":       { "factor": 1, "offset": 0 }
   }

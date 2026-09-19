@@ -110,6 +110,22 @@ function corr($val, $key, $sesgos) {
             }
         }
     }
+    // rangos por valor (sobre el valor bruto): la primera condición que se cumple manda
+    if (!empty($s['ranges']) && is_array($s['ranges'])) {
+        $v = (float)$val;
+        foreach ($s['ranges'] as $rg) {
+            $ok = true;
+            if (isset($rg['gt'])  && !($v >  (float)$rg['gt']))  $ok = false;
+            if (isset($rg['gte']) && !($v >= (float)$rg['gte'])) $ok = false;
+            if (isset($rg['lt'])  && !($v <  (float)$rg['lt']))  $ok = false;
+            if (isset($rg['lte']) && !($v <= (float)$rg['lte'])) $ok = false;
+            if ($ok) {
+                if (isset($rg['factor'])) $f = (float)$rg['factor'];
+                if (isset($rg['offset'])) $o = (float)$rg['offset'];
+                break;
+            }
+        }
+    }
     return (float)$val * $f + $o;
 }
 
@@ -210,16 +226,13 @@ $ptrS  = $D['pressure']['data']['baromrelin_increment']['symbol'] ?? 0;
 $ptr   = ($ptrV !== null && is_numeric($ptrV)) ? (($ptrS < 0 ? '-' : '+') . number_format((float)$ptrV,1,'.','')) : null;
 
 $solar = corr(raw($D,'so_uv','solarradiation'),'solar', $sesgos);
-$uv    = corr(raw($D,'so_uv','uv'),            'uv',    $sesgos);
-$sunr  = clean_time($D,'so_uv','sunrise_time');
-$suns  = clean_time($D,'so_uv','sunset_time');
 
 // ¿se ha aplicado alguna corrección real?
 $corr_on = false;
 foreach ($sesgos as $s) {
     if (!is_array($s)) continue;
     if ((isset($s['factor']) && (float)$s['factor'] != 1.0) || (isset($s['offset']) && (float)$s['offset'] != 0.0)) { $corr_on = true; break; }
-    if (!empty($s['windows'])) { $corr_on = true; break; }
+    if (!empty($s['windows']) || !empty($s['ranges'])) { $corr_on = true; break; }
 }
 
 $out = [
@@ -229,7 +242,7 @@ $out = [
     'time'      => clean_time($D, 'temp', 'tempf'),
     'corrected' => $corr_on,
     'groups'    => [
-        ['key'=>'exterior','title'=>'Exterior','items'=>[
+        ['key'=>'exterior','title'=>'Temperatura y humedad','items'=>[
             ['label'=>'Temperatura','value'=>fmt($temp,1),'unit'=>$uT,'big'=>true],
             ['label'=>'Sensación','value'=>fmt($feels,1),'unit'=>$uT],
             ['label'=>'Humedad','value'=>fmt($hum,0),'unit'=>'%'],
@@ -252,8 +265,6 @@ $out = [
             ['label'=>'Presión','value'=>fmt($pres,1),'unit'=>$uP,'big'=>true],
             ['label'=>'Tendencia 3 h','value'=>($ptr ?? '–'),'unit'=>$uP],
             ['label'=>'Radiación','value'=>fmt($solar,0),'unit'=>$uS],
-            ['label'=>'Índice UV','value'=>fmt($uv,0),'unit'=>''],
-            ['label'=>'Orto / Ocaso','value'=>($sunr && $suns? $sunr.' / '.$suns : '–'),'unit'=>''],
         ]],
     ],
 ];
