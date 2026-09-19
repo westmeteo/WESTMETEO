@@ -1,282 +1,340 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@WESTMETEO</title>
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>@WESTMETEO · Meteorología de montaña</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+ *{margin:0;padding:0;box-sizing:border-box}
+ body{font-family:'Source Sans 3',sans-serif;background:#263d52;color:#d5e1ec;min-height:100vh}
+ a{color:inherit}
 
-        body {
-            font-family: 'Source Sans 3', sans-serif;
-            background: #263d52;
-            color: #d5e1ec;
-            min-height: 100vh;
-        }
+ /* BANNER */
+ header{position:relative;overflow:hidden}
+ .banner{height:300px;background:#20374f url('banner.png') center/cover no-repeat}
+ .tagband{text-align:center;padding:15px 20px;background:#22384c;border-bottom:1px solid #33506b}
+ .tagband .tagline{font-size:.92rem;letter-spacing:4px;text-transform:uppercase;color:#7eb3d8}
 
-        /* === HEADER === */
-        header {
-            text-align: center;
-            padding: 70px 20px 50px;
-            background: linear-gradient(180deg, #325170 0%, #2d4662 40%, #263d52 100%);
-            position: relative;
-            overflow: hidden;
-        }
+ /* NAV PESTAÑAS */
+ nav{position:sticky;top:0;z-index:30;display:flex;justify-content:center;gap:4px;flex-wrap:wrap;
+   background:#1f3346;border-bottom:1px solid #33506b;padding:0 10px}
+ nav button{font-family:'Oswald',sans-serif;font-size:.9rem;letter-spacing:2px;text-transform:uppercase;
+   background:none;border:none;color:#7fa7c6;padding:16px 20px;cursor:pointer;border-bottom:3px solid transparent;transition:all .18s}
+ nav button:hover{color:#cfe3f4}
+ nav button.activa{color:#fff;border-bottom-color:#48b5e0}
 
-        header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 60px;
-            background:
-                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 100'%3E%3Cpolygon points='0,100 150,40 300,75 500,20 650,60 800,10 950,50 1100,30 1200,55 1200,100' fill='%23263d52'/%3E%3C/svg%3E");
-            background-size: cover;
-            background-position: bottom;
-        }
+ main{max-width:820px;margin:0 auto;padding:34px 18px 70px}
+ .panel{display:none} .panel.activa{display:block}
+ .section-title{font-family:'Oswald',sans-serif;font-size:1rem;letter-spacing:4px;text-transform:uppercase;
+   color:#5ea0cc;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid #334f68}
 
-        header h1 {
-            font-family: 'Oswald', sans-serif;
-            font-size: 3.5rem;
-            font-weight: 700;
-            letter-spacing: 8px;
-            color: #ffffff;
-            position: relative;
-            z-index: 1;
-        }
+ /* SELECTOR LOCALIDAD */
+ .selector{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+ .selector label{font-family:'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#7fa7c6;font-size:.85rem}
+ select{font-family:'Source Sans 3',sans-serif;font-size:1rem;background:#2b4a63;color:#eaf2f8;border:1px solid #3a80c4;
+   border-radius:6px;padding:9px 14px;min-width:230px;cursor:pointer}
+ .fuente{font-size:.78rem;color:#6c93b3;margin:6px 0 22px}
+ .fuente b{color:#8fd0ff}
 
-        header .tagline {
-            margin-top: 8px;
-            font-size: 0.9rem;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            color: #7eb3d8;
-            position: relative;
-            z-index: 1;
-        }
+ /* PREVISION */
+ .dia{font-family:'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#cfe3f4;font-size:.95rem;
+   margin:22px 0 6px;padding:8px 12px;background:#22384c;border-radius:6px}
+ .franja{display:grid;grid-template-columns:52px 40px 56px 1fr 62px 74px;align-items:center;gap:8px;
+   padding:8px 12px;border-bottom:1px solid #2e4b62}
+ .franja:nth-child(odd){background:rgba(255,255,255,.018)}
+ .fh{font-weight:600;color:#bcd4e6}
+ .fi{font-size:1.35rem;text-align:center}
+ .ft{font-size:1.05rem;font-weight:600;color:#fff;text-align:right}
+ .fll{font-size:.85rem;color:#7fc4ff;text-align:right}
+ .fv{font-size:.82rem;color:#a3c0d8;text-align:right;white-space:nowrap}
+ .fv .flecha{display:inline-block;color:#5ea0cc}
+ /* columna nubes: 3 barras baja/media/alta */
+ .nubes{display:flex;flex-direction:column;gap:2px}
+ .nubes .fila{display:flex;align-items:center;gap:6px}
+ .nubes .et{font-size:.62rem;color:#6c93b3;width:14px;text-transform:uppercase}
+ .nubes .barra{flex:1;height:6px;background:#22384c;border-radius:3px;overflow:hidden}
+ .nubes .rell{height:100%;border-radius:3px}
+ .rell.baja{background:#4a9be0}.rell.media{background:#7fb8e6}.rell.alta{background:#bcd8ef}
+ .cabnubes{font-size:.62rem;color:#6c93b3;text-transform:uppercase;letter-spacing:1px}
+ #estado{padding:26px 0;text-align:center;color:#7fa7c6}
 
-        /* === CONTENEDOR PRINCIPAL === */
-        main {
-            max-width: 760px;
-            margin: 0 auto;
-            padding: 40px 20px 80px;
-        }
+ /* PARTES */
+ .prevision{background:linear-gradient(135deg,#2b4a63,#284460);border-left:4px solid #3a7bd5;border-radius:6px;
+   padding:22px 26px;margin-bottom:18px;transition:all .25s;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+ .prevision:hover{background:linear-gradient(135deg,#305572,#2c4e6a);transform:translateX(4px);box-shadow:0 4px 16px rgba(0,0,0,.2)}
+ .prevision.destacada{border-left-width:5px;border-left-color:#48b5e0;background:linear-gradient(135deg,#2d5070,#294a65)}
+ .prevision h3{font-family:'Oswald',sans-serif;font-size:1.2rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff;margin-bottom:4px}
+ .prevision .fecha{font-size:.82rem;color:#6fa3c8;margin-bottom:14px}
+ .prevision .btn{display:inline-flex;align-items:center;gap:8px;color:#4a9be0;text-decoration:none;font-weight:600;font-size:.9rem;
+   padding:8px 22px;border:1px solid #3a80c4;border-radius:4px;transition:all .2s}
+ .prevision .btn:hover{background:#3a7bd5;color:#fff;border-color:#3a7bd5}
 
-        .section-title {
-            font-family: 'Oswald', sans-serif;
-            font-size: 1rem;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            color: #5ea0cc;
-            margin-bottom: 24px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #334f68;
-        }
+ /* VISORES */
+ .visores{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+ .visor{display:block;text-decoration:none;background:linear-gradient(135deg,#2d5070,#294a65);border:1px solid #33506b;
+   border-radius:10px;padding:30px 24px;text-align:center;transition:all .22s}
+ .visor:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(0,0,0,.3);border-color:#48b5e0}
+ .visor .ico{font-size:2.6rem}
+ .visor h3{font-family:'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#fff;margin:12px 0 6px;font-size:1.15rem}
+ .visor p{font-size:.85rem;color:#a3c0d8}
 
-        /* === PREVISIONES === */
-        .prevision {
-            background: linear-gradient(135deg, #2b4a63 0%, #284460 100%);
-            border-left: 4px solid #3a7bd5;
-            border-radius: 6px;
-            padding: 24px 28px;
-            margin-bottom: 20px;
-            transition: all 0.25s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-        }
+ /* ABOUT / CONTACTO */
+ .about{padding:32px 28px;margin:30px 0;background:linear-gradient(135deg,#2b4a63,#274260);border-top:3px solid #3a7bd5;border-radius:6px}
+ .about p{font-size:.92rem;line-height:1.8;color:#a3c0d8;text-align:justify}
+ .about strong{color:#d0e4f4}
+ form{max-width:520px}
+ form label{display:block;font-size:.85rem;color:#7fa7c6;margin:14px 0 6px;letter-spacing:1px}
+ form input,form textarea{width:100%;background:#22384c;border:1px solid #33506b;border-radius:6px;color:#eaf2f8;
+   font-family:'Source Sans 3',sans-serif;font-size:1rem;padding:11px 14px}
+ form textarea{min-height:120px;resize:vertical}
+ form button{margin-top:18px;background:#3a7bd5;color:#fff;border:none;border-radius:6px;padding:12px 30px;
+   font-family:'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase;font-size:.9rem;cursor:pointer;transition:background .2s}
+ form button:hover{background:#48b5e0}
+ .aviso{margin-top:14px;font-size:.85rem;padding:10px 14px;border-radius:6px;display:none}
+ .aviso.ok{display:block;background:#1f4a35;color:#bfeccc;border:1px solid #2f7a52}
+ .aviso.err{display:block;background:#4a2530;color:#f0c0c8;border:1px solid #7a2f42}
 
-        .prevision:hover {
-            background: linear-gradient(135deg, #305572 0%, #2c4e6a 100%);
-            transform: translateX(4px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-        }
+ footer{text-align:center;padding:30px 20px;color:#3d5f7a;font-size:.78rem;letter-spacing:2px;text-transform:uppercase;border-top:1px solid #2e4b62}
 
-        .prevision h2 {
-            font-family: 'Oswald', sans-serif;
-            font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: #ffffff;
-            margin-bottom: 4px;
-        }
-
-        .prevision .fecha {
-            font-size: 0.82rem;
-            color: #6fa3c8;
-            margin-bottom: 16px;
-        }
-
-        .prevision a {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            color: #4a9be0;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-            padding: 8px 22px;
-            border: 1px solid #3a80c4;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-        }
-
-        .prevision a:hover {
-            background: #3a7bd5;
-            color: #ffffff;
-            border-color: #3a7bd5;
-        }
-
-        /* === ÚLTIMA PREDICCIÓN (destacada) === */
-        .prevision.destacada {
-            border-left-width: 5px;
-            border-left-color: #48b5e0;
-            background: linear-gradient(135deg, #2d5070 0%, #294a65 100%);
-        }
-
-        /* === ABOUT === */
-        .about {
-            padding: 36px 30px;
-            margin: 40px 0;
-            background: linear-gradient(135deg, #2b4a63 0%, #274260 100%);
-            border-top: 3px solid #3a7bd5;
-            border-bottom: 1px solid #334f68;
-            border-radius: 6px;
-        }
-
-        .about p {
-            font-size: 0.92rem;
-            line-height: 1.8;
-            color: #a3c0d8;
-            text-align: justify;
-        }
-
-        .about strong {
-            color: #d0e4f4;
-        }
-
-        /* === FOOTER === */
-        footer {
-            text-align: center;
-            padding: 30px 20px;
-            color: #3d5f7a;
-            font-size: 0.78rem;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            border-top: 1px solid #2e4b62;
-        }
-
-        /* === RESPONSIVE === */
-        @media (max-width: 600px) {
-            header h1 { font-size: 2.4rem; letter-spacing: 5px; }
-            header .tagline { font-size: 0.75rem; letter-spacing: 2px; }
-            .about { padding: 28px 20px; }
-            .about p { font-size: 0.88rem; }
-            .prevision { padding: 20px; }
-        }
-    </style>
+ @media(max-width:600px){
+   .banner{height:210px}.banner h1{font-size:2.3rem;letter-spacing:5px}.banner .tagline{font-size:.72rem;letter-spacing:2px}
+   nav button{padding:13px 12px;font-size:.78rem;letter-spacing:1px}
+   .franja{grid-template-columns:44px 32px 46px 1fr 50px 60px;gap:5px;padding:7px 8px}
+   .fi{font-size:1.1rem}.ft{font-size:.95rem}.fv{font-size:.72rem}
+   .visores{grid-template-columns:1fr}
+ }
+</style>
 </head>
 <body>
 
-    <header>
-        <h1>@WESTMETEO</h1>
-        <p class="tagline">Meteorología de montaña · Sistema Central Oeste</p>
-    </header>
+<header>
+  <div class="banner" id="banner">
+    <h1>@WESTMETEO</h1>
+    <p class="tagline">Meteorología de montaña · Sistema Central Oeste</p>
+  </div>
+</header>
 
-    <main>
+<nav>
+  <button class="activa" data-tab="prevision">Previsión</button>
+  <button data-tab="partes">Partes</button>
+  <button data-tab="visores">Visores</button>
+  <button data-tab="contacto">Contacto</button>
+</nav>
 
-        <!-- =============================================
-             ÚLTIMA PREDICCIÓN
-             =============================================
-             Cuando publiques una nueva predicción:
-             1. Mueve el bloque "destacada" actual abajo,
-                a la sección de ANTERIORES (y quítale la
-                clase "destacada").
-             2. Pon aquí la nueva con clase "destacada".
+<main>
 
-             PLANTILLA:
+  <!-- PREVISION -->
+  <section class="panel activa" id="prevision">
+    <div class="selector">
+      <label for="loc">Localidad</label>
+      <select id="loc"></select>
+    </div>
+    <p class="fuente">Próximas 48 h · modelo <b>AROME</b> (Météo-France) vía Open-Meteo. Sesgos @westmeteo próximamente.</p>
+    <div id="estado">Cargando previsión…</div>
+    <div id="tabla"></div>
+  </section>
 
-             <div class="prevision destacada">
-                 <h2>Predicción XX–XX de Mes</h2>
-                 <p class="fecha">Publicado: XX de mes de 2026</p>
-                 <a href="nombre_del_archivo.pdf" target="_blank">📄 Descargar PDF</a>
-             </div>
+  <!-- PARTES -->
+  <section class="panel" id="partes">
+    <h2 class="section-title">Última predicción</h2>
+    <div class="prevision destacada">
+      <h3>Predicción 6-8 de marzo</h3>
+      <p class="fecha">Publicado: 6 de marzo de 2026</p>
+      <a class="btn" href="Previsión 6-8 de marzo.pdf" target="_blank">📄 Descargar PDF</a>
+    </div>
+    <h2 class="section-title" style="margin-top:34px">Predicciones anteriores</h2>
+    <div class="prevision">
+      <h3>Predicción 27 de Febrero · 1 de marzo</h3>
+      <p class="fecha">Publicado: 27 de febrero de 2026</p>
+      <a class="btn" href="Previsión 27 febrero 1 marzo.pdf" target="_blank">📄 Descargar PDF</a>
+    </div>
+    <div class="prevision">
+      <h3>Predicción 20-22 de Febrero</h3>
+      <p class="fecha">Publicado: 19 de febrero de 2026</p>
+      <a class="btn" href="Previsión 20-22 de Febrero.pdf" target="_blank">📄 Descargar PDF</a>
+    </div>
+    <div class="prevision">
+      <h3>Predicción 13-15 de Febrero</h3>
+      <p class="fecha">Publicado: 12 de febrero de 2026</p>
+      <a class="btn" href="Predicción 13-15 Febrero 2026.pdf" target="_blank">📄 Descargar PDF</a>
+    </div>
+    <div class="prevision">
+      <h3>Predicción 30 de enero · 1 de Febrero</h3>
+      <p class="fecha">Publicado: 30 de enero de 2026</p>
+      <a class="btn" href="Previsión 30 de enero 1 de Febrero.pdf" target="_blank">📄 Descargar PDF</a>
+    </div>
+  </section>
 
-             ============================================= -->
+  <!-- VISORES -->
+  <section class="panel" id="visores">
+    <h2 class="section-title">Visores 3D</h2>
+    <div class="visores">
+      <a class="visor" href="mapa_bejar_hd.html">
+        <div class="ico">🏔️</div><h3>Visor Béjar</h3>
+        <p>Sierra de Béjar en 3D con satélite de alta resolución.</p>
+      </a>
+      <a class="visor" href="ultra-gredos-2026.html">
+        <div class="ico">⛰️</div><h3>Visor Gredos</h3>
+        <p>Macizo Central de Gredos y el Almanzor en 3D.</p>
+      </a>
+    </div>
+  </section>
 
-        <h2 class="section-title">Última predicción</h2>
+  <!-- CONTACTO -->
+  <section class="panel" id="contacto">
+    <h2 class="section-title">Contacto</h2>
+    <div class="about">
+      <p><strong>@WESTMETEO</strong> es un servicio meteorológico independiente y privado especializado en el análisis mesoscalar del Sistema Central Oeste y la Sierra de Béjar. Nuestras predicciones integran los modelos numéricos (AROME, GFS, ECMWF) con observación local propia acumulada durante años de seguimiento microclimático. <strong>@WESTMETEO es un proyecto personal y no constituye una fuente oficial.</strong> Contrasta siempre con AEMET o Météo-France y aplica el sentido común en el terreno. ¡Nos vemos en la nieve! 🏔️</p>
+    </div>
+    <p style="color:#a3c0d8;font-size:.92rem;margin-bottom:6px">¿Dudas, sugerencias o quieres previsión de tu zona? Escríbenos:</p>
+    <form id="fcontacto" action="contacto.php" method="post">
+      <label for="nombre">Nombre (opcional)</label>
+      <input type="text" id="nombre" name="nombre" autocomplete="name">
+      <label for="email">Tu correo</label>
+      <input type="email" id="email" name="email" required autocomplete="email">
+      <label for="mensaje">Mensaje</label>
+      <textarea id="mensaje" name="mensaje" required></textarea>
+      <button type="submit">Enviar</button>
+      <div class="aviso" id="avisoContacto"></div>
+    </form>
+  </section>
 
-        <div class="prevision destacada">
-            <h2>Predicción 6-8 de marzo</h2>
-            <p class="fecha">Publicado: 6 de marzo de 2026</p>
-            <a href="Previsión 6-8 de marzo.pdf" target="_blank">📄 Descargar PDF</a>
-        </div>
+</main>
 
+<footer>@WESTMETEO · Sierra de Béjar · Sistema Central Oeste</footer>
 
-        <!-- =============================================
-             BLOQUE INFORMATIVO (no tocar)
-             ============================================= -->
+<script>
+const LOCS = [{"n": "Abadía", "lat": 40.2594, "lon": -5.9781, "z": "Sierra de Béjar"}, {"n": "Aldeacipreste", "lat": 40.3811, "lon": -5.8979, "z": "Sierra de Béjar"}, {"n": "Aldeanueva del Camino", "lat": 40.259, "lon": -5.9297, "z": "Sierra de Béjar"}, {"n": "Baños de Montemayor", "lat": 40.3178, "lon": -5.8573, "z": "Sierra de Béjar"}, {"n": "Becedas", "lat": 40.405, "lon": -5.6343, "z": "Sierra de Béjar"}, {"n": "Béjar", "lat": 40.3866, "lon": -5.765, "z": "Sierra de Béjar"}, {"n": "Cabezuela del Valle", "lat": 40.1927, "lon": -5.8056, "z": "Sierra de Béjar"}, {"n": "Canchal de la Ceja (2425 m)", "lat": 40.3097, "lon": -5.7017, "z": "Sierra de Béjar", "alt": 2425}, {"n": "Candelario", "lat": 40.3684, "lon": -5.7448, "z": "Sierra de Béjar"}, {"n": "Cantagallo", "lat": 40.3731, "lon": -5.8178, "z": "Sierra de Béjar"}, {"n": "Casas del Monte", "lat": 40.2024, "lon": -5.9604, "z": "Sierra de Béjar"}, {"n": "Colmenar de Montemayor", "lat": 40.3992, "lon": -5.9563, "z": "Sierra de Béjar"}, {"n": "Cristóbal", "lat": 40.4693, "lon": -5.8899, "z": "Sierra de Béjar"}, {"n": "El Barco de Ávila", "lat": 40.3577, "lon": -5.5231, "z": "Sierra de Béjar"}, {"n": "El Cerro", "lat": 40.327, "lon": -5.916, "z": "Sierra de Béjar"}, {"n": "El Losar del Barco", "lat": 40.3932, "lon": -5.5393, "z": "Sierra de Béjar"}, {"n": "El Tejado", "lat": 40.4427, "lon": -5.5388, "z": "Sierra de Béjar"}, {"n": "El Travieso (1850 m)", "lat": 40.315, "lon": -5.695, "z": "Sierra de Béjar", "alt": 1850}, {"n": "Fresnedoso", "lat": 40.4363, "lon": -5.7096, "z": "Sierra de Béjar"}, {"n": "Gargantilla", "lat": 40.2483, "lon": -5.9202, "z": "Sierra de Béjar"}, {"n": "Gil García", "lat": 40.2978, "lon": -5.5942, "z": "Sierra de Béjar"}, {"n": "Gilbuena", "lat": 40.415, "lon": -5.6063, "z": "Sierra de Béjar"}, {"n": "Hervás", "lat": 40.2739, "lon": -5.8587, "z": "Sierra de Béjar"}, {"n": "Horcajo de Montemayor", "lat": 40.4215, "lon": -5.8945, "z": "Sierra de Béjar"}, {"n": "Hoya Moros (2000 m)", "lat": 40.303, "lon": -5.706, "z": "Sierra de Béjar", "alt": 2000}, {"n": "Jerte", "lat": 40.2226, "lon": -5.751, "z": "Sierra de Béjar"}, {"n": "Junciana", "lat": 40.4113, "lon": -5.5568, "z": "Sierra de Béjar"}, {"n": "La Calzada de Béjar", "lat": 40.4116, "lon": -5.8183, "z": "Sierra de Béjar"}, {"n": "La Carrera", "lat": 40.3478, "lon": -5.555, "z": "Sierra de Béjar"}, {"n": "La Garganta", "lat": 40.3284, "lon": -5.8229, "z": "Sierra de Béjar"}, {"n": "La Granja", "lat": 40.2393, "lon": -5.9946, "z": "Sierra de Béjar"}, {"n": "La Hoya", "lat": 40.4066, "lon": -5.6989, "z": "Sierra de Béjar"}, {"n": "Lagunilla", "lat": 40.3247, "lon": -5.9718, "z": "Sierra de Béjar"}, {"n": "Ledrada", "lat": 40.4689, "lon": -5.7201, "z": "Sierra de Béjar"}, {"n": "Los Llanos de Tormes", "lat": 40.3283, "lon": -5.5002, "z": "Sierra de Béjar"}, {"n": "Medinilla", "lat": 40.44, "lon": -5.6182, "z": "Sierra de Béjar"}, {"n": "Molinillo", "lat": 40.469, "lon": -5.9452, "z": "Sierra de Béjar"}, {"n": "Montemayor del Río", "lat": 40.3478, "lon": -5.8949, "z": "Sierra de Béjar"}, {"n": "Nava de Béjar", "lat": 40.4754, "lon": -5.6787, "z": "Sierra de Béjar"}, {"n": "Nava del Barco", "lat": 40.2947, "lon": -5.5408, "z": "Sierra de Béjar"}, {"n": "Navacarros", "lat": 40.398, "lon": -5.7143, "z": "Sierra de Béjar"}, {"n": "Navaconcejo", "lat": 40.1768, "lon": -5.8296, "z": "Sierra de Béjar"}, {"n": "Navalmoral de Béjar", "lat": 40.4231, "lon": -5.7828, "z": "Sierra de Béjar"}, {"n": "Navalonguilla", "lat": 40.2786, "lon": -5.5007, "z": "Sierra de Béjar"}, {"n": "Navatejares", "lat": 40.3355, "lon": -5.5321, "z": "Sierra de Béjar"}, {"n": "Neila de San Miguel", "lat": 40.4235, "lon": -5.6508, "z": "Sierra de Béjar"}, {"n": "Peromingo", "lat": 40.4636, "lon": -5.7722, "z": "Sierra de Béjar"}, {"n": "Peñacaballera", "lat": 40.3443, "lon": -5.8607, "z": "Sierra de Béjar"}, {"n": "Pinedas", "lat": 40.445, "lon": -5.9609, "z": "Sierra de Béjar"}, {"n": "Puerto Castilla", "lat": 40.2896, "lon": -5.6297, "z": "Sierra de Béjar"}, {"n": "Puerto de Béjar", "lat": 40.35, "lon": -5.8389, "z": "Sierra de Béjar"}, {"n": "San Bartolomé de Béjar", "lat": 40.408, "lon": -5.6627, "z": "Sierra de Béjar"}, {"n": "Sanchotello", "lat": 40.4383, "lon": -5.7532, "z": "Sierra de Béjar"}, {"n": "Segura de Toro", "lat": 40.2234, "lon": -5.9478, "z": "Sierra de Béjar"}, {"n": "Solana de Ávila", "lat": 40.3154, "lon": -5.6122, "z": "Sierra de Béjar"}, {"n": "Sorihuela", "lat": 40.444, "lon": -5.6778, "z": "Sierra de Béjar"}, {"n": "Tormellas", "lat": 40.3042, "lon": -5.5117, "z": "Sierra de Béjar"}, {"n": "Tornavacas", "lat": 40.2557, "lon": -5.6885, "z": "Sierra de Béjar"}, {"n": "Umbrías", "lat": 40.3131, "lon": -5.5785, "z": "Sierra de Béjar"}, {"n": "Valdefuentes de Sangusín", "lat": 40.4664, "lon": -5.8326, "z": "Sierra de Béjar"}, {"n": "Valdehijaderos", "lat": 40.4193, "lon": -5.8489, "z": "Sierra de Béjar"}, {"n": "Valdelageve", "lat": 40.3691, "lon": -5.991, "z": "Sierra de Béjar"}, {"n": "Vallejera de Riofrío", "lat": 40.4091, "lon": -5.7196, "z": "Sierra de Béjar"}, {"n": "Guijuelo", "lat": 40.556, "lon": -5.669, "z": "Ciudades"}, {"n": "Plasencia", "lat": 40.031, "lon": -6.089, "z": "Ciudades"}, {"n": "Salamanca", "lat": 40.965, "lon": -5.664, "z": "Ciudades"}, {"n": "Ávila", "lat": 40.656, "lon": -4.7, "z": "Ciudades"}, {"n": "Ameal de Pablo", "lat": 40.247, "lon": -5.268, "z": "Sierra de Gredos"}, {"n": "Cerro del Morezón (2401 m)", "lat": 40.265, "lon": -5.247, "z": "Sierra de Gredos", "alt": 2401}, {"n": "Hoyos del Espino", "lat": 40.348, "lon": -5.171, "z": "Sierra de Gredos"}, {"n": "Laguna Grande (2000 m)", "lat": 40.2513, "lon": -5.279, "z": "Sierra de Gredos", "alt": 2000}, {"n": "Navarredonda de Gredos", "lat": 40.3455, "lon": -5.135, "z": "Sierra de Gredos"}, {"n": "Pico Almanzor (2592 m)", "lat": 40.2397, "lon": -5.2807, "z": "Sierra de Gredos", "alt": 2592}, {"n": "Plataforma de Gredos", "lat": 40.283, "lon": -5.219, "z": "Sierra de Gredos"}, {"n": "Refugio Victory (1975 m)", "lat": 40.253, "lon": -5.281, "z": "Sierra de Gredos", "alt": 1975}];
 
-        <div class="about">
-            <p>
-                <strong>@WESTMETEO</strong> es un servicio meteorológico independiente y privado especializado en el análisis mesoscalar del Sistema Central Oeste y la Sierra de Béjar. Nuestras predicciones se generan mediante un enfoque inductivo, integrando las salidas de modelos numéricos de predicción (NWP) como HARMONIE-AROME, GFS y ECMWF con bases de datos propias de observación local alimentadas durante años de seguimiento microclimático de estas sierras. En esencia, contrastamos la modelización sinóptica y mesoescalar con el comportamiento real observado en altitud, lo que nos permite afinar pronósticos donde los modelos generalistas suelen patinar — especialmente en fenómenos orográficos, inversiones térmicas y gradientes de precipitación. Dicho esto, <strong>@WESTMETEO</strong> es un proyecto personal y no constituye una fuente oficial de información meteorológica. <strong>No nos hacemos responsables de las decisiones tomadas en base a nuestras predicciones.</strong> Úsalas como una herramienta complementaria para planificar tus actividades en montaña, pero contrasta siempre con fuentes oficiales (AEMET, Météo-France) y, sobre todo, aplica el sentido común en el terreno. ¡Nos vemos en la nieve! 🏔️
-            </p>
-        </div>
+/* === PESTAÑAS === */
+document.querySelectorAll('nav button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('activa'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('activa'));
+    b.classList.add('activa');
+    document.getElementById(b.dataset.tab).classList.add('activa');
+  });
+});
 
+/* === SELECTOR === */
+const sel=document.getElementById('loc');
+let zonaActual='';
+for(const l of LOCS){
+  if(l.z!==zonaActual){zonaActual=l.z; const og=document.createElement('optgroup'); og.label=l.z; og.id='og_'+l.z; sel.appendChild(og);}
+  const o=document.createElement('option'); o.textContent=l.n; sel.lastChild.appendChild(o);
+}
+// selecciona Béjar por defecto
+[...sel.options].forEach((o,i)=>{ if(o.textContent==='Béjar') sel.selectedIndex=i; });
 
-        <!-- =============================================
-             PREDICCIONES ANTERIORES
-             =============================================
-             Aquí van las predicciones antiguas.
-             Cuando añadas una nueva arriba, mueve la que
-             estaba destacada aquí (sin clase "destacada").
+function locSeleccionada(){
+  const nombre=sel.options[sel.selectedIndex].textContent;
+  return LOCS.find(l=>l.n===nombre);
+}
 
-             Ejemplo:
+/* === PREVISION (AROME vía Open-Meteo) === */
+const DIAS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const RUMBOS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+const cache={};
 
-             <div class="prevision">
-                 <h2>Predicción 13–15 de Febrero</h2>
-                 <p class="fecha">Publicado: 12 de febrero de 2026</p>
-                 <a href="prevision_13-15_feb.pdf" target="_blank">📄 Descargar PDF</a>
-             </div>
-r
-             ============================================= -->
+function totalNubes(lo,mid,hi){ // solape aleatorio
+  const f=(1-(lo||0)/100)*(1-(mid||0)/100)*(1-(hi||0)/100);
+  return Math.round((1-f)*100);
+}
+function icono(tot,precip,snow,hora){
+  const noche=(hora<7||hora>=21);
+  if((snow||0)>0.05) return '🌨️';
+  if((precip||0)>=2) return '🌧️';
+  if((precip||0)>=0.2) return noche?'🌧️':'🌦️';
+  if(tot<15) return noche?'🌙':'☀️';
+  if(tot<50) return noche?'☁️':'🌤️';
+  if(tot<85) return '⛅';
+  return '☁️';
+}
+function barra(et,v){
+  return `<div class="fila"><span class="et">${et}</span><span class="barra"><span class="rell ${et==='B'?'baja':et==='M'?'media':'alta'}" style="width:${v||0}%"></span></span></div>`;
+}
 
-        <h2 class="section-title">Predicciones anteriores</h2>
+async function cargar(){
+  const loc=locSeleccionada(); if(!loc)return;
+  document.getElementById('tabla').innerHTML='';
+  document.getElementById('estado').textContent='Cargando previsión…';
+  const clave=loc.n;
+  try{
+    let d=cache[clave];
+    if(!d){
+      const base=`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}`+
+        (loc.alt?`&elevation=${loc.alt}`:'')+
+        `&hourly=temperature_2m,precipitation,snowfall,cloud_cover_low,cloud_cover_mid,cloud_cover_high,`+
+        `wind_speed_10m,wind_gusts_10m,wind_direction_10m&timezone=Europe%2FMadrid&forecast_days=3`;
+      let r=await fetch(base+`&models=meteofrance_arome_france_hd`);
+      d=await r.json();
+      // si AROME no trae temperatura para esta localidad, usa el modelo automático
+      if(!d.hourly || d.hourly.temperature_2m.every(v=>v===null)){
+        r=await fetch(base); d=await r.json(); d._auto=true;
+      }
+      cache[clave]=d;
+    }
+    render(d,loc);
+  }catch(e){
+    document.getElementById('estado').textContent='No se pudo cargar la previsión. Reintenta en unos segundos.';
+  }
+}
 
-  
-        <div class="prevision">
-            <h2>Predicción 27 de Febrero - 1 de marzo</h2>
-            <p class="fecha">Publicado: 27 de febrero de 2026</p>
-            <a href="Previsión 27 febrero 1 marzo.pdf" target="_blank">📄 Descargar PDF</a>
-        </div>
+function render(d,loc){
+  const H=d.hourly, ahora=new Date();
+  const desde=new Date(ahora.getTime()-3600e3), hasta=new Date(ahora.getTime()+48*3600e3);
+  let html='', diaAnt='';
+  const cab=`<div class="franja" style="border-bottom:1px solid #33506b;background:none">
+     <span class="cabnubes">Hora</span><span></span><span class="cabnubes" style="text-align:right">Temp</span>
+     <span class="cabnubes" style="text-align:center">Nubes B/M/A</span>
+     <span class="cabnubes" style="text-align:right">Lluvia</span><span class="cabnubes" style="text-align:right">Viento</span></div>`;
+  let filas=0;
+  for(let i=0;i<H.time.length;i++){
+    const t=new Date(H.time[i]);
+    if(t<desde||t>hasta) continue;
+    const dk=t.getDate()+'-'+t.getMonth();
+    if(dk!==diaAnt){
+      diaAnt=dk;
+      html+=`<div class="dia">${DIAS[t.getDay()]} ${t.getDate()} ${MES[t.getMonth()]}</div>${cab}`;
+    }
+    const lo=H.cloud_cover_low[i], mid=H.cloud_cover_mid[i], hi=H.cloud_cover_high[i];
+    const tot=totalNubes(lo,mid,hi);
+    const temp=H.temperature_2m[i], pr=H.precipitation[i], sn=H.snowfall[i];
+    const vv=Math.round(H.wind_speed_10m[i]||0), vg=Math.round(H.wind_gusts_10m[i]||0), vd=H.wind_direction_10m[i]||0;
+    const rumbo=RUMBOS[Math.round(vd/22.5)%16];
+    html+=`<div class="franja">
+      <span class="fh">${String(t.getHours()).padStart(2,'0')}h</span>
+      <span class="fi">${icono(tot,pr,sn,t.getHours())}</span>
+      <span class="ft">${temp!=null?Math.round(temp)+'°':'–'}</span>
+      <span class="nubes">${barra('A',hi)}${barra('M',mid)}${barra('B',lo)}</span>
+      <span class="fll">${pr>0?pr.toFixed(1)+'mm':'–'}</span>
+      <span class="fv"><span class="flecha" style="transform:rotate(${vd+180}deg)">↑</span> ${rumbo} ${vv}${vg>vv+10?' <span style="color:#e0994a">('+vg+')</span>':''}</span>
+    </div>`;
+    filas++;
+  }
+  document.getElementById('estado').textContent = filas ? '' : 'Sin datos para esta localidad ahora mismo.';
+  if(d._auto && filas) document.getElementById('estado').innerHTML='<span style="font-size:.8rem;color:#e0994a">AROME no cubre este punto; mostrando modelo automático.</span>';
+  document.getElementById('tabla').innerHTML=html;
+}
 
-         <div class="prevision">
-            <h2>Predicción 20-22 de Febrero</h2>
-            <p class="fecha">Publicado: 19 de febrero de 2026</p>
-            <a href="Previsión 20-22 de Febrero.pdf" target="_blank">📄 Descargar PDF</a>
-        </div>
+sel.addEventListener('change',cargar);
+cargar();
 
-
-        <div class="prevision">
-            <h2>Predicción 13–15 de Febrero</h2>
-            <p class="fecha">Publicado: 12 de febrero de 2026</p>
-            <a href="Predicción 13-15 Febrero 2026.pdf" target="_blank">📄 Descargar PDF</a>
-        </div>
-
-        <div class="prevision">
-                 <h2>Predicción 30 de enero - 1 de Febrero</h2>
-                 <p class="fecha">Publicado: 30 de enero de 2026</p>
-                 <a href="Previsión 30 de enero 1 de Febrero.pdf" target="_blank">📄 Descargar PDF</a>
-        </div>
- 
-        <!-- (Aún no hay predicciones anteriores) -->
-
-    </main>
-
-    <footer>
-        @WESTMETEO · Sierra de Béjar · Sistema Central Oeste
-    </footer>
-
+/* === CONTACTO (envío por PHP, con aviso sin recargar) === */
+const fc=document.getElementById('fcontacto');
+fc.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const av=document.getElementById('avisoContacto');
+  try{
+    const r=await fetch('contacto.php',{method:'POST',body:new FormData(fc)});
+    if(r.ok){ av.className='aviso ok'; av.textContent='¡Gracias! Mensaje enviado. Te responderemos pronto.'; fc.reset(); }
+    else throw 0;
+  }catch(_){
+    av.className='aviso err'; av.textContent='No se pudo enviar ahora. Escríbenos directamente a hola@westmeteo.com';
+  }
+});
+</script>
 </body>
 </html>
