@@ -120,7 +120,7 @@
  @media(max-width:600px){
    .banner{height:210px}.tagband .tagline{font-size:.74rem;letter-spacing:2px}
    nav{flex-wrap:nowrap;gap:0;padding:0 2px}
-   nav button{padding:12px 3px;font-size:.74rem;letter-spacing:.2px;flex:1 1 0;min-width:0;white-space:nowrap}
+   nav button{padding:12px 3px;font-size:.86rem;letter-spacing:.3px;flex:1 1 0;min-width:0;white-space:nowrap}
    .franja{grid-template-columns:44px 32px 46px 1fr 50px 60px;gap:5px;padding:7px 8px}
    .fi{font-size:1.1rem}.ft{font-size:.95rem}.fv{font-size:.72rem}
    .visores{grid-template-columns:1fr}
@@ -387,8 +387,7 @@ async function cargarEstacion(id){
       html+='</div>';
     }
     estCards.innerHTML=html;
-    const corr=d.corrected?' · valores corregidos (sesgos WM)':'';
-    document.getElementById('estPie').innerHTML='Actualizado: '+(d.time||'ahora')+corr+' · fuente: red @westmeteo';
+    document.getElementById('estPie').innerHTML='Actualizado: '+(d.time||'ahora')+' · fuente: red @westmeteo';
   }catch(e){
     document.getElementById('estPie').textContent='No se pudo cargar la estación.';
   }
