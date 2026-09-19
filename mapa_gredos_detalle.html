@@ -1,8 +1,8 @@
 <!DOCTYPE html><html lang="es"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Circo de Gredos — detalle 5 m (IGN) sobre base 30 m · @westmeteo</title>
 <style>
- html,body{margin:0;height:100%;overflow:hidden;background:#bcd4e6;font-family:system-ui,sans-serif}
+ html,body{margin:0;height:100%;overflow:hidden;background:#bcd4e6;font-family:system-ui,sans-serif;touch-action:none}
  #info{position:absolute;top:14px;left:16px;color:#eaf2f8;font-size:13px;background:rgba(12,26,40,.5);
    backdrop-filter:blur(6px);padding:9px 13px;border-radius:10px;line-height:1.5}
  #info b{color:#8fd0ff}
@@ -55,16 +55,75 @@ const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,1,200000);
 camera.position.set(DET.cx+BASE.W*0.2, relieve*2.2+MAX*0.5, DET.cz+BASE.H*0.75);
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true; controls.dampingFactor=0.06; controls.maxPolarAngle=Math.PI*0.49;
-controls.enableZoom=false;    // usamos zoom propio, suave y hacia el cursor
+controls.enableZoom=false;   // zoom propio (rueda + pinch), un solo sistema suave
+controls.enablePan=true; controls.screenSpacePanning=true; controls.panSpeed=2.6; controls.rotateSpeed=2.8;
+controls.touches.ONE=-1;                         // un dedo = pan propio finger-lock (mas abajo), no OrbitControls
+controls.touches.TWO=THREE.TOUCH.DOLLY_ROTATE;   // dos dedos = pivotar (+ zoom propio por pellizco)
 controls.target.set(DET.cx, relieve*0.3, DET.cz);
-// --- zoom suave (interpolado) hacia el punto del cursor ---
+
 const _ray=new THREE.Raycaster(), _m=new THREE.Vector2(); let _zv=0, _focus=controls.target.clone();
-renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();
-  _m.x=(e.clientX/innerWidth)*2-1; _m.y=-(e.clientY/innerHeight)*2+1;
+function _focusFrom(px,py){   // proyecta un punto de pantalla al plano del target -> foco del zoom
+  _m.x=(px/innerWidth)*2-1; _m.y=-(py/innerHeight)*2+1;
   _ray.setFromCamera(_m,camera); const o=_ray.ray.origin,d=_ray.ray.direction;
   if(Math.abs(d.y)>1e-4){const t=(controls.target.y-o.y)/d.y; if(t>0)_focus=o.clone().add(d.clone().multiplyScalar(t));}
-  _zv += (e.deltaY<0?1:-1)*0.16;   // acumula intencion de zoom (rueda)
-},{passive:false});
+}
+// pan propio de un dedo: proyecta el dedo a un plano horizontal fijo y arrastra el mapa en
+// coordenadas de mundo. Al trabajar en mundo, el desplazamiento es identico con cualquier zoom.
+let _panPrev=null, _panY=0;
+function _groundAt(px,py,planeY){
+  _m.x=(px/innerWidth)*2-1; _m.y=-(py/innerHeight)*2+1;
+  _ray.setFromCamera(_m,camera); const o=_ray.ray.origin,d=_ray.ray.direction;
+  if(Math.abs(d.y)<1e-4)return null; const t=(planeY-o.y)/d.y; if(t<=0)return null;
+  return o.clone().add(d.clone().multiplyScalar(t));
+}
+// rueda (escritorio): zoom suave hacia el cursor. capture+stop evita zoom doble.
+renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();e.stopPropagation();
+  _focusFrom(e.clientX,e.clientY);
+  _zv+=(e.deltaY<0?1:-1)*0.16;
+},{passive:false,capture:true});
+// pinch (movil): un gesto de dos dedos es O zoom O giro, NUNCA los dos (evita el conflicto).
+// Se decide por que domine en los primeros pixeles: cambio de distancia => zoom; desplazamiento
+// del punto medio => giro. Una vez decidido, se bloquea.
+const _tch=new Map(); let _pinch=0, _pmid=null, _accD=0, _accM=0, _g2=0;  // _g2: 0 sin decidir · 1 zoom · 2 giro
+function _dist(){const p=[..._tch.values()];return Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);}
+function _mid(){const p=[..._tch.values()];return[(p[0].x+p[1].x)/2,(p[0].y+p[1].y)/2];}
+// pivote del giro = punto del terreno bajo el punto medio de los dos dedos (no el centro del mapa)
+function _setPivot(px,py){
+  _m.x=(px/innerWidth)*2-1; _m.y=-(py/innerHeight)*2+1;
+  _ray.setFromCamera(_m,camera); const o=_ray.ray.origin,d=_ray.ray.direction;
+  if(Math.abs(d.y)>0.05){const t=(controls.target.y-o.y)/d.y;
+    if(t>0){const p=o.clone().add(d.clone().multiplyScalar(t));
+      if(Math.abs(p.x)<MAX && Math.abs(p.z)<MAX) controls.target.set(p.x, controls.target.y, p.z);}}
+}
+renderer.domElement.addEventListener('pointerdown',e=>{
+  _zv=0;   // corta el impulso de zoom residual para que no frene el arrastre posterior
+  if(e.pointerType==='touch'){_tch.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(_tch.size===1){_panY=controls.target.y;_panPrev=_groundAt(e.clientX,e.clientY,_panY);}
+    else if(_tch.size===2){_pinch=_dist();_pmid=_mid();_accD=0;_accM=0;_g2=0;}}
+},{capture:true});
+renderer.domElement.addEventListener('pointermove',e=>{
+  if(e.pointerType!=='touch'||!_tch.has(e.pointerId))return;
+  _tch.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(_tch.size===1){ _zv=0;   // un dedo = arrastre propio finger-lock (igual a cualquier zoom)
+    const now=_groundAt(e.clientX,e.clientY,_panY);
+    if(now&&_panPrev){const dx=_panPrev.x-now.x, dz=_panPrev.z-now.z;
+      camera.position.x+=dx;camera.position.z+=dz;controls.target.x+=dx;controls.target.z+=dz;}
+  }
+  else if(_tch.size===2){e.preventDefault();   // evita el zoom de pagina del navegador
+    const d=_dist(), m=_mid();
+    _accD+=Math.abs(d-_pinch);
+    if(_pmid) _accM+=Math.hypot(m[0]-_pmid[0], m[1]-_pmid[1]);
+    if(_g2===0 && (_accD+_accM)>10){ _g2 = (_accD>=_accM) ? 1 : 2;   // decide y bloquea el modo
+      if(_g2===2) _setPivot(m[0],m[1]); }   // GIRO: recoloca el pivote bajo el punto medio de los dedos
+    if(_g2===1){ e.stopPropagation();   // ZOOM: consume el gesto, OrbitControls no gira
+      _focusFrom(m[0],m[1]); _zv+=(d-_pinch)*0.016; }
+    else if(_g2===2){ _zv=0; }   // GIRO: mata el impulso de zoom para que no lo frene
+    _pinch=d; _pmid=m;}
+},{passive:false,capture:true});
+function _end(e){if(_tch.delete(e.pointerId)&&_tch.size<2){_pinch=0;_pmid=null;_g2=0;_zv=0;
+  if(_tch.size===1){const p=[..._tch.values()][0];_panY=controls.target.y;_panPrev=_groundAt(p.x,p.y,_panY);}}}
+renderer.domElement.addEventListener('pointerup',_end,{capture:true});
+renderer.domElement.addEventListener('pointercancel',_end,{capture:true});
 function applyZoom(){
   if(Math.abs(_zv)<1e-4)return;
   const s=Math.max(-0.4,Math.min(0.4,_zv*0.22));   // fraccion suavizada por frame
