@@ -3,29 +3,34 @@
 <title>Planifica tu ruta · @westmeteo</title>
 <style>
  :root{--marino:#1a3a5c;--azul:#2980b9;--gris:#f2f5f7}
- html,body{margin:0;height:100%;background:#0c1a28;font-family:system-ui,sans-serif;color:#eaf2f8}
+ html,body{margin:0;height:100%;background:#263d52;font-family:system-ui,sans-serif;color:#eaf2f8}
  body{overflow:auto}
  body.viewer{overflow:hidden;touch-action:none}
  canvas{touch-action:none}
  a{color:#8fd0ff}
 
  /* ---------- pantalla de configuracion ---------- */
- #setup{min-height:100%;box-sizing:border-box;padding:26px 16px 60px;display:flex;flex-direction:column;align-items:center}
- #setup .box{width:100%;max-width:720px}
+ #setup{min-height:100%;box-sizing:border-box;padding:0 0 60px;display:flex;flex-direction:column;align-items:center}
+ #setup .box{width:100%;max-width:720px;padding:24px 16px 0}
+ .pf-banner{display:block;width:100%;text-decoration:none;color:inherit;cursor:pointer}
+ .pf-banner .bimg{height:220px;background:#20374f url('banner.jpg') center/cover no-repeat}
+ .pf-banner .tagband{background:#1f3346;border-bottom:1px solid #33506b;padding:11px 16px;text-align:center;
+   font-size:.8rem;letter-spacing:3px;text-transform:uppercase;color:#9ec7e6}
+ .pf-banner:hover .tagband{color:#cfe3f4}
  #setup h1{font-size:24px;margin:6px 0 2px;color:#fff}
  #setup h1 .sub{display:block;font-size:13px;font-weight:600;color:#8fd0ff;margin-top:4px}
  #setup .intro{color:#9fb6c8;font-size:13.5px;line-height:1.5;margin:10px 0 18px}
- .card{background:#13273b;border:1px solid rgba(143,208,255,.14);border-radius:14px;padding:16px 16px;margin:12px 0}
+ .card{background:#1f3346;border:1px solid #33506b;border-radius:14px;padding:16px 16px;margin:12px 0}
  .card h3{margin:0 0 10px;font-size:14px;color:#8fd0ff;letter-spacing:.3px;text-transform:uppercase}
  label{display:block;font-size:12.5px;color:#cfe0ee;margin:8px 0 3px}
- input,select,textarea{width:100%;box-sizing:border-box;background:#0f2033;border:1px solid rgba(143,208,255,.22);
+ input,select,textarea{width:100%;box-sizing:border-box;background:#22384c;border:1px solid #33506b;
    border-radius:9px;color:#eaf2f8;font:14px system-ui,sans-serif;padding:9px 11px}
  textarea{resize:vertical;min-height:52px}
  .row{display:flex;gap:12px;flex-wrap:wrap}
  .row>div{flex:1;min-width:130px}
  #drop{border:2px dashed rgba(143,208,255,.4);border-radius:12px;padding:22px 14px;text-align:center;
-   cursor:pointer;background:#0f2033;transition:.15s}
- #drop.hover{border-color:#8fd0ff;background:#12293f}
+   cursor:pointer;background:#22384c;transition:.15s}
+ #drop.hover{border-color:#8fd0ff;background:#2a4560}
  #drop b{color:#fff} #drop .gpxname{display:block;margin-top:8px;color:#78dcaa;font-weight:700;font-size:13px}
  .paradas .parada{display:flex;gap:8px;align-items:end;margin:6px 0}
  .paradas .parada>div{flex:1}
@@ -97,6 +102,7 @@
    background:rgba(12,26,40,.86);color:#eaf2f8;font-size:15px;font-weight:600;text-align:center}
  #cargando.show{display:flex}
  @media(max-width:640px){
+   .pf-banner .bimg{height:150px}
    #topbar{flex-wrap:wrap;gap:8px;padding:7px 10px}
    #ptitle{font-size:15px;width:100%}
    #tabs{margin-left:0;width:100%}
@@ -108,7 +114,12 @@
 </style></head><body>
 
 <!-- ===================== PANTALLA DE CONFIGURACION ===================== -->
-<div id="setup"><div class="box">
+<div id="setup">
+  <a class="pf-banner" href="index.html" title="Volver a @westmeteo">
+    <div class="bimg"></div>
+    <div class="tagband">Meteorología de montaña · Sistema Central Oeste</div>
+  </a>
+  <div class="box">
   <h1>Planifica tu ruta<span class="sub">Sube tu GPX y obtén perfil, previsión por tramos y, si cae en zona cubierta, terreno 3D · @westmeteo</span></h1>
   <p class="intro">La previsión usa AROME HD (Météo-France) o ECMWF-IFS, con la corrección WM0.2 de @westmeteo. El perfil y el desnivel se calculan sobre el modelo de elevación del terreno. Todo se procesa en tu navegador; el GPX no sale de tu dispositivo salvo que generes un enlace para compartir.</p>
 
@@ -431,7 +442,7 @@ async function generar(gpxText, inputs){
 function montarResultado(hayVisor, region, inputs, texURL, BASE, P, ROUTE, MARK){
   $('setup').style.display='none'; $('app').style.display='block';
   const titulo=inputs.titulo?inputs.titulo:'Planifica tu ruta';
-  $('ptitle').innerHTML=titulo+'<span class="sub">'+(region?region.nombre:'ruta libre')+' · @westmeteo</span>';
+  $('ptitle').innerHTML=titulo+'<span class="sub">'+(region?region.nombre:'ruta libre')+' · <a href="index.html" title="Volver a @westmeteo" style="color:#8fd0ff;text-decoration:none">@westmeteo</a></span>';
   $('mtitulo').textContent=titulo==='Planifica tu ruta'?'Perfil altimétrico con meteo':titulo;
   $('mnotas').textContent=inputs.notas||'';
   const paraTxt=CFG.paradas.length?` · ${CFG.paradas.length} parada${CFG.paradas.length>1?'s':''}`:'';
