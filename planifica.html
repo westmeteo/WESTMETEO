@@ -79,6 +79,9 @@
  .wp-ini{color:#fff;background:rgba(41,128,185,.85)}
  .wp-alto{color:#0c1a28;background:rgba(255,207,106,.9)}
  .wp-parada{color:#0c1a28;background:rgba(120,220,170,.92)}
+ .town{font-size:10.5px;font-weight:600;color:#f2f7fb;white-space:nowrap;pointer-events:none;
+   text-shadow:0 1px 2px #000,0 0 3px #000;transform:translate(-50%,-115%);display:flex;align-items:center;gap:3px}
+ .town .tdot{width:5px;height:5px;border-radius:50%;background:#ffe082;box-shadow:0 0 0 1.5px rgba(0,0,0,.55);flex:0 0 auto}
  #compass{position:absolute;bottom:18px;right:18px;width:96px;height:96px;z-index:20;cursor:pointer;
    filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));user-select:none;display:none}
  #compass text{font-family:system-ui,sans-serif;font-weight:800;text-anchor:middle;dominant-baseline:central}
@@ -245,6 +248,30 @@ const REGIONS=[
   {key:'bejar',  nombre:'Sierra de Béjar',  LAT0:40.16,  LAT1:40.48,  LON0:-6.00, LON1:-5.49},
   {key:'gredos', nombre:'Sierra de Gredos', LAT0:40.115, LAT1:40.385, LON0:-5.49, LON1:-5.06},
 ];
+// Municipios/núcleos por región (etiquetas en el visor; se ocultan los tapados por el terreno).
+const MUNICIPIOS={
+  bejar:[
+    {n:'Béjar',lat:40.38472,lon:-5.76194},{n:'Candelario',lat:40.36806,lon:-5.74444},
+    {n:'Hervás',lat:40.27389,lon:-5.86583},{n:'Baños de Montemayor',lat:40.31833,lon:-5.85722},
+    {n:'Puerto de Béjar',lat:40.35139,lon:-5.83750},{n:'Montemayor del Río',lat:40.34861,lon:-5.89528},
+    {n:'La Calzada de Béjar',lat:40.41167,lon:-5.81722},{n:'Lagunilla',lat:40.32500,lon:-5.97167},
+    {n:'Sorihuela',lat:40.44444,lon:-5.67778},{n:'Navacarros',lat:40.39694,lon:-5.71444},
+    {n:'El Cerro',lat:40.31694,lon:-5.91667},{n:'Aldeacipreste',lat:40.38056,lon:-5.89611},
+    {n:'Cantagallo',lat:40.37306,lon:-5.81972},{n:'La Garganta',lat:40.32842,lon:-5.82291},
+    {n:'Solana de Ávila',lat:40.31472,lon:-5.61583},{n:'Puerto Castilla',lat:40.28944,lon:-5.62972},
+    {n:'El Barco de Ávila',lat:40.35972,lon:-5.52361},{n:'Los Llanos de Tormes',lat:40.32816,lon:-5.50020},
+    {n:'Nava del Barco',lat:40.29250,lon:-5.54028},{n:'Navalonguilla',lat:40.27833,lon:-5.50194},
+  ],
+  gredos:[
+    {n:'Candeleda',lat:40.15572,lon:-5.24096},{n:'Arenas de San Pedro',lat:40.20861,lon:-5.08611},
+    {n:'El Arenal',lat:40.26472,lon:-5.08722},{n:'Guisando',lat:40.22167,lon:-5.13972},
+    {n:'El Hornillo',lat:40.24972,lon:-5.10417},{n:'Poyales del Hoyo',lat:40.17167,lon:-5.15694},
+    {n:'Madrigal de la Vera',lat:40.14750,lon:-5.36681},{n:'Hoyos del Espino',lat:40.35659,lon:-5.17414},
+    {n:'Navarredonda de Gredos',lat:40.36250,lon:-5.13361},{n:'Navacepeda de Tormes',lat:40.36139,lon:-5.24861},
+    {n:'Bohoyo',lat:40.31500,lon:-5.44111},{n:'Zapardiel de la Ribera',lat:40.35556,lon:-5.32861},
+    {n:'Navalperal de Tormes',lat:40.35278,lon:-5.30056},
+  ],
+};
 // Corrección WM0.2 (sesgo del modelo). Valores por rellenar; la etiqueta "+ WM0.2" aparece siempre.
 const WM02_BIAS={ temperature_2m:0, apparent_temperature:0, wind:0, gust:0, precipitation:0 };
 function wm02(v,key){ return (v==null||isNaN(v))?v : v+(WM02_BIAS[key]||0); }
@@ -415,7 +442,7 @@ async function generar(gpxText, inputs){
     { const d=new Date(t0+86400000); CFG.fecha_fin=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
     // --- marcadores 3D + línea (solo si hay visor) ---
-    let BASE=null, P=null, ROUTE=null, MARK=null;
+    let BASE=null, P=null, ROUTE=null, MARK=null, TOWNS=null;
     if(region){
       P={zmin:meta.zmin, zmax:meta.zmax, exag:EXAG};
       const meshZ=new Float32Array(meta.n*meta.n);           // BASE.z = flipud(dem)
@@ -439,10 +466,18 @@ async function generar(gpxText, inputs){
       ];
       for(const p of paradas){ const mp=mundo(lat[p.istop],lon[p.istop],DRAPE+40);
         MARK.push({n:`Parada ${(p.secs/3600).toFixed(1).replace('.0','')} h · km ${String(p.km).replace('.',',')}`, x:mp[0],y:mp[1],z:mp[2], cls:'wp wp-parada'}); }
+      // etiquetas de municipios dentro de la región (ground point; oclusión en el visor)
+      TOWNS=[];
+      for(const t of (MUNICIPIOS[region.key]||[])){
+        if(t.lat>region.LAT0 && t.lat<region.LAT1 && t.lon>region.LON0 && t.lon<region.LON1){
+          const m=mundo(t.lat,t.lon,0);
+          TOWNS.push({n:t.n, x:m[0], y:m[1], z:m[2]});
+        }
+      }
     }
 
     // --- montar interfaz ---
-    montarResultado(!!region, region, inputs, texURL, BASE, P, ROUTE, MARK);
+    montarResultado(!!region, region, inputs, texURL, BASE, P, ROUTE, MARK, TOWNS);
     hideLoad();
   }catch(err){
     hideLoad();
@@ -453,7 +488,7 @@ async function generar(gpxText, inputs){
   }
 }
 
-function montarResultado(hayVisor, region, inputs, texURL, BASE, P, ROUTE, MARK){
+function montarResultado(hayVisor, region, inputs, texURL, BASE, P, ROUTE, MARK, TOWNS){
   $('setup').style.display='none'; $('app').style.display='block';
   const titulo=inputs.titulo?inputs.titulo:'Planifica tu ruta';
   $('ptitle').innerHTML=titulo+'<span class="sub">'+(region?region.nombre:'ruta libre')+' · <a href="index.html" title="Volver a @westmeteo" style="color:#8fd0ff;text-decoration:none">@westmeteo</a></span>';
@@ -466,7 +501,7 @@ function montarResultado(hayVisor, region, inputs, texURL, BASE, P, ROUTE, MARK)
   if(hayVisor){
     document.body.classList.add('viewer');
     $('tabs').style.display='flex'; $('aviso').classList.remove('show');
-    VIS=initVisor(BASE,P,ROUTE,MARK,texURL);
+    VIS=initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS);
     // pestañas
     const btnV=$('btnVisor'), btnM=$('btnMeteo'), pM=$('meteo');
     btnV.onclick=()=>{btnV.classList.add('activa');btnM.classList.remove('activa');pM.classList.remove('visible');VIS.setVista(true);};
@@ -500,8 +535,17 @@ function ajustarHead(){
 }
 
 /* ================= VISOR 3D (portado de siguiente_plan.py) ================= */
-function initVisor(BASE,P,ROUTE,MARK,texURL){
+function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
   const MAX=Math.max(BASE.W,BASE.H), relieve=(P.zmax-P.zmin)*P.exag;
+  const townObjs=[];
+  // altura del terreno en coordenadas de mundo (lookup directo sobre la malla BASE.z = flipud(dem))
+  const _n=BASE.n;
+  function terrenoY(x,z){
+    let c=Math.round((x/BASE.W+0.5)*(_n-1)), r=Math.round((z/BASE.H+0.5)*(_n-1));
+    if(c<0)c=0; else if(c>_n-1)c=_n-1;
+    if(r<0)r=0; else if(r>_n-1)r=_n-1;
+    return (BASE.z[r*_n+c]-P.zmin)*P.exag;
+  }
   const scene=new THREE.Scene();
   const renderer=new THREE.WebGLRenderer({antialias:true});
   renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -597,6 +641,15 @@ function initVisor(BASE,P,ROUTE,MARK,texURL){
     for(const m of MARK){ const d=document.createElement('div'); d.className=m.cls; d.textContent=m.n;
       const o=new CSS2DObject(d); o.position.set(m.x,m.y,m.z); scene.add(o); }
 
+    // etiquetas de municipios: el objeto va un poco elevado; la oclusión se prueba en el punto de suelo
+    for(const t of (TOWNS||[])){
+      const d=document.createElement('div'); d.className='town';
+      d.innerHTML='<span class="tdot"></span>'+t.n;
+      const o=new CSS2DObject(d); o.position.set(t.x, t.y+DRAPE+6, t.z);
+      o.userData.ground=new THREE.Vector3(t.x, t.y, t.z);
+      scene.add(o); townObjs.push(o);
+    }
+
     const sol=new THREE.DirectionalLight(0xfff4e0,2.0);
     sol.position.set(-BASE.W*0.5,relieve+MAX*0.8,BASE.H*0.45); sol.castShadow=true; sol.shadow.mapSize.set(2048,2048);
     const sc=sol.shadow.camera,Rr=MAX*0.7; sc.left=-Rr;sc.right=Rr;sc.top=Rr;sc.bottom=-Rr;sc.near=1;sc.far=MAX*4;sc.updateProjectionMatrix();
@@ -632,7 +685,31 @@ function initVisor(BASE,P,ROUTE,MARK,texURL){
     const th=Math.atan2(Math.sin(sph.theta),Math.cos(sph.theta));
     if(Math.abs(th)<0.002){sph.theta=0;_snapN=0;} else sph.theta=th*0.82;
     off.setFromSpherical(sph); camera.position.copy(controls.target).add(off); }
-  (function loop(){requestAnimationFrame(loop);applyZoom();orientarNorte();controls.update();brujula();renderer.render(scene,camera);labelR.render(scene,camera);})();
+
+  // oclusión de etiquetas de municipio: ray-march cámara->suelo sobre el DEM; oculta las tapadas y las de detrás
+  const _dir=new THREE.Vector3(), _pj=new THREE.Vector3(), _marg=Math.max(10,relieve*0.006);
+  function ocluido(g){
+    _dir.set(g.x-camera.position.x, g.y-camera.position.y, g.z-camera.position.z);
+    const L=_dir.length(); if(L<1) return false; _dir.divideScalar(L);
+    const N=42, cerca=MAX*0.012;
+    for(let k=1;k<N;k++){
+      const t=L*k/N; if(L-t<cerca) break;                 // no auto-ocluir junto al pueblo
+      const py=camera.position.y+_dir.y*t;
+      if(py < terrenoY(camera.position.x+_dir.x*t, camera.position.z+_dir.z*t)-_marg) return true;
+    }
+    return false;
+  }
+  function actualizarTowns(){
+    for(const o of townObjs){
+      const g=o.userData.ground;
+      _pj.copy(g).project(camera);
+      o.visible = (_pj.z<=1) && !ocluido(g);              // z>1 => detrás de la cámara
+    }
+  }
+  let _tf=0;
+  (function loop(){requestAnimationFrame(loop);applyZoom();orientarNorte();controls.update();brujula();
+    if(townObjs.length && (_tf++%5)===0) actualizarTowns();
+    renderer.render(scene,camera);labelR.render(scene,camera);})();
 
   function setVista(v){
     renderer.domElement.style.display=v?'block':'none';
