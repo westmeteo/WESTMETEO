@@ -68,7 +68,7 @@
  .nubes .et{font-size:.62rem;color:#6c93b3;width:14px;text-transform:uppercase}
  .nubes .barra{flex:1;height:6px;background:#22384c;border-radius:3px;overflow:hidden}
  .nubes .rell{height:100%;border-radius:3px}
- .rell.baja{background:#4a9be0}.rell.media{background:#7fb8e6}.rell.alta{background:#bcd8ef}
+ .rell.baja{background:#3a82d6}.rell.media{background:#5aa6e6}.rell.alta{background:#8fc9f2}
  .cabnubes{font-size:.62rem;color:#6c93b3;text-transform:uppercase;letter-spacing:1px}
  #estado{padding:16px 0;text-align:center;color:#7fa7c6}
 
@@ -407,7 +407,7 @@ function render(d,loc){
   let html='', diaAnt='';
   const cab=`<div class="franja" style="border-bottom:1px solid #33506b;background:none">
      <span class="cabnubes">Hora</span><span></span><span class="cabnubes" style="text-align:right">Temp</span>
-     <span class="cabnubes" style="text-align:center">Nubes B/M/A</span>
+     <span class="cabnubes" style="text-align:center">Nubes A/M/B</span>
      <span class="cabnubes" style="text-align:right">Lluvia</span><span class="cabnubes" style="text-align:right">Viento</span></div>`;
   let filas=0;
   for(let i=0;i<H.time.length;i++){
@@ -428,7 +428,7 @@ function render(d,loc){
       <span class="fi">${icono(tot,pr,sn,t.getHours())}</span>
       <span class="ft">${temp!=null?Math.round(temp)+'°':'–'}</span>
       <span class="nubes">${barra('A',hi)}${barra('M',mid)}${barra('B',lo)}</span>
-      <span class="fll">${pr>0?pr.toFixed(1)+'mm':'–'}</span>
+      <span class="fll">${pr>0?pr.toFixed(1)+'mm':'0'}</span>
       <span class="fv"><span class="flecha" style="transform:rotate(${vd+180}deg)">↑</span> ${rumbo} ${vv}${vg>vv+10?' <span style="color:#e0994a">('+vg+')</span>':''}</span>
     </div>`;
     filas++;
