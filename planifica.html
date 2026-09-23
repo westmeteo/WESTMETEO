@@ -418,9 +418,10 @@ async function generar(gpxText, inputs){
       for(let i=0;i<n;i+=step){ const m=mundo(lat[i],lon[i],DRAPE); ROUTE.push(+m[0].toFixed(1),+m[1].toFixed(1),+m[2].toFixed(1)); }
       { const m=mundo(lat[n-1],lon[n-1],DRAPE); ROUTE.push(+m[0].toFixed(1),+m[1].toFixed(1),+m[2].toFixed(1)); }
       let imax=0; for(let i=1;i<n;i++) if(ele[i]>ele[imax]) imax=i;
-      const ms=mundo(lat[0],lon[0],DRAPE+40), mh=mundo(lat[imax],lon[imax],DRAPE+40);
+      const ms=mundo(lat[0],lon[0],DRAPE+40), me=mundo(lat[n-1],lon[n-1],DRAPE+72), mh=mundo(lat[imax],lon[imax],DRAPE+40);
       MARK=[
-        {n:`Salida ${inputs.hora} · Meta ~${hhmm(metaMs)}`, x:ms[0],y:ms[1],z:ms[2], cls:'wp wp-ini'},
+        {n:`Salida ${inputs.hora}`, x:ms[0],y:ms[1],z:ms[2], cls:'wp wp-ini'},
+        {n:`Meta ~${hhmm(metaMs)}`, x:me[0],y:me[1],z:me[2], cls:'wp wp-ini'},
         {n:`Punto alto ${Math.round(ele[imax])} m`, x:mh[0],y:mh[1],z:mh[2], cls:'wp wp-alto'},
       ];
       for(const p of paradas){ const mp=mundo(lat[p.istop],lon[p.istop],DRAPE+40);
