@@ -793,15 +793,23 @@ function svgToPng(svg,scale=2){
     img.onerror=rej; img.src='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(xml)));
   });
 }
+function cargarImagen(url){
+  return new Promise((res,rej)=>{ const img=new Image();
+    img.onload=()=>{ const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
+      c.getContext('2d').drawImage(img,0,0); res({data:c.toDataURL('image/jpeg',0.85), w:img.naturalWidth, h:img.naturalHeight}); };
+    img.onerror=rej; img.src=url; });
+}
 async function exportarPDF(){
   if(!FILAS.length){ alert('Espera a que cargue la previsión.'); return; }
   const { jsPDF }=window.jspdf; const doc=new jsPDF('l','mm','a4');
   const titulo=(INPUTS.titulo||'Planifica tu ruta');
-  doc.setFontSize(16); doc.setTextColor(26,58,92); doc.text(titulo,14,16);
+  let y=12;
+  try{ const lg=await cargarImagen('banner.jpg'); const w=64, h=w*lg.h/lg.w;
+    doc.addImage(lg.data,'JPEG',14,y,w,h); y+=h+6; }
+  catch(e){ y=16; }
+  doc.setFontSize(16); doc.setTextColor(26,58,92); doc.text(titulo,14,y); y+=7;
   doc.setFontSize(9); doc.setTextColor(90);
-  doc.text($('mmeta').textContent,14,23);
-  doc.text($('modelo').textContent,14,29);
-  let y=33;
+  for(const t of [$('mmeta').textContent, $('modelo').textContent]){ const ls=doc.splitTextToSize(t,269); doc.text(ls,14,y); y+=ls.length*5; }
   if(INPUTS.notas){ doc.setTextColor(60); const ls=doc.splitTextToSize('Notas: '+INPUTS.notas,270); doc.text(ls,14,y); y+=ls.length*4+2; }
   const svg=document.querySelector('#perfil');
   if(svg){ try{ const png=await svgToPng(svg,2); const w=200, h=w*png.h/png.w; doc.addImage(png.data,'PNG',14,y,w,h); y+=h+4; }catch(e){} }
