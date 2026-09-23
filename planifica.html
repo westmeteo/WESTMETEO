@@ -872,7 +872,12 @@ async function compartir(){
       body:JSON.stringify({gpx:RAWGPX, inputs:INPUTS})});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const j=await r.json(); if(!j.ok||!j.id) throw new Error(j.error||'sin id');
-    const url=location.origin+location.pathname+'?p='+encodeURIComponent(j.id);
+    // en webviews/in-app la página va por un blob: interno -> location.origin sería "blob:..."
+    // (enlace inservible). El plan solo se sirve desde westmeteo.com (PHP), así que usamos la URL canónica.
+    const base=(location.protocol==='http:'||location.protocol==='https:')
+      ? location.origin+location.pathname
+      : 'https://westmeteo.com/planifica.html';
+    const url=base+'?p='+encodeURIComponent(j.id);
     try{ await navigator.clipboard.writeText(url); btn.textContent='Enlace copiado ✓'; }
     catch(e){ prompt('Copia el enlace para compartir:', url); btn.textContent=prev; }
     setTimeout(()=>btn.textContent=prev,2500);
