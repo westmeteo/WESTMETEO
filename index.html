@@ -470,7 +470,7 @@ document.getElementById('tabla').addEventListener('click',e=>{
   const n=e.target.closest('.nubes'); if(!n) return;
   const fmt=v=> (v===''||v==null) ? '<span style="color:#6c93b3">s/d</span>' : v+'%';
   nubePop.innerHTML=`<h4>Nubes por niveles</h4>
-    <div class="np-row"><span class="np-sw" style="background:#8fc9f2"></span><span class="np-tx"><b>A · Altas</b><br><small>cirros, por encima de ~6 km</small></span><span class="np-pct">${fmt(n.dataset.a)}</span></div>
+    <div class="np-row"><span class="np-sw" style="background:#8fc9f2"></span><span class="np-tx"><b>A · Altas</b><br><small>cirros, cirrocúmulos o cirroestratos, por encima de ~6 km</small></span><span class="np-pct">${fmt(n.dataset.a)}</span></div>
     <div class="np-row"><span class="np-sw" style="background:#5aa6e6"></span><span class="np-tx"><b>M · Medias</b><br><small>entre ~2 y 6 km</small></span><span class="np-pct">${fmt(n.dataset.m)}</span></div>
     <div class="np-row"><span class="np-sw" style="background:#3a82d6"></span><span class="np-tx"><b>B · Bajas</b><br><small>por debajo de ~2 km</small></span><span class="np-pct">${fmt(n.dataset.b)}</span></div>
     <div class="np-foot">El icono del tiempo combina los tres niveles. Toca fuera para cerrar.</div>`;
