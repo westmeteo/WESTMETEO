@@ -51,8 +51,14 @@
  /* ---------- resultado (visor + meteo), calcado de siguiente-plan ---------- */
  #app{display:none}
  body.viewer #app{display:block}
- #topbar{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;align-items:center;gap:14px;
-   padding:8px 14px;background:linear-gradient(180deg,rgba(12,26,40,.82),rgba(12,26,40,.35));backdrop-filter:blur(6px)}
+ #ohead{position:fixed;top:0;left:0;right:0;z-index:42;background:#1f3346;border-bottom:1px solid #33506b}
+ .obanner{display:block;text-decoration:none;color:inherit;cursor:pointer}
+ .obanner .bimg{height:92px;background:#20374f url('banner.jpg') center/contain no-repeat}
+ .obanner .tagband{padding:5px 12px 6px;text-align:center;font-size:.62rem;letter-spacing:2px;
+   text-transform:uppercase;color:#9ec7e6;border-top:1px solid rgba(51,80,107,.5)}
+ .obanner:hover .tagband{color:#cfe3f4}
+ #topbar{position:relative;z-index:1;display:flex;align-items:center;gap:14px;
+   padding:8px 14px;background:#1f3346}
  #ptitle{color:#eaf2f8;font-weight:800;font-size:17px;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  #ptitle .sub{color:#8fd0ff;font-weight:600;font-size:12px;margin-left:8px}
  #tabs{display:flex;gap:8px;margin-left:auto}
@@ -103,6 +109,7 @@
  #cargando.show{display:flex}
  @media(max-width:640px){
    .pf-banner .bimg{height:150px}
+   .obanner .bimg{height:68px}
    #topbar{flex-wrap:wrap;gap:8px;padding:7px 10px}
    #ptitle{font-size:15px;width:100%}
    #tabs{margin-left:0;width:100%}
@@ -170,12 +177,18 @@
 
 <!-- ===================== RESULTADO ===================== -->
 <div id="app">
-  <div id="topbar">
-    <div id="ptitle"></div>
-    <div id="tabs">
-      <button id="btnVisor" class="tab activa">Visor Ruta</button>
-      <button id="btnMeteo" class="tab">Perfil altimétrico con meteo</button>
-      <button id="btnNueva">Nueva ruta</button>
+  <div id="ohead">
+    <a class="obanner" href="index.html" title="Volver a @westmeteo">
+      <div class="bimg"></div>
+      <div class="tagband">Meteorología de montaña · Sistema Central Oeste</div>
+    </a>
+    <div id="topbar">
+      <div id="ptitle"></div>
+      <div id="tabs">
+        <button id="btnVisor" class="tab activa">Visor Ruta</button>
+        <button id="btnMeteo" class="tab">Perfil altimétrico con meteo</button>
+        <button id="btnNueva">Nueva ruta</button>
+      </div>
     </div>
   </div>
   <div id="aviso">Ruta no visualizable en westmeteo</div>
@@ -466,13 +479,21 @@ function montarResultado(hayVisor, region, inputs, texURL, BASE, P, ROUTE, MARK)
     $('btnVisor').style.display='none'; $('btnMeteo').style.display='none';
     $('info').style.display='none';
     $('aviso').classList.add('show');
-    $('meteo').classList.add('visible'); $('meteo').style.top='0';
-    $('meteo').style.inset='92px 0 0 0';
+    $('meteo').classList.add('visible');
     cargarPrevision();
   }
   $('btnNueva').onclick=()=>{ location.href=location.pathname; };
   $('btnPDF').onclick=exportarPDF;
   $('btnCompartir').onclick=compartir;
+  ajustarHead(); addEventListener('resize',ajustarHead);
+}
+
+// coloca los paneles de salida justo debajo del banner fijo #ohead (alto variable en móvil)
+function ajustarHead(){
+  const h=$('ohead').offsetHeight;
+  $('meteo').style.top=h+'px';
+  $('aviso').style.top=h+'px';
+  $('info').style.top=(h+6)+'px';
 }
 
 /* ================= VISOR 3D (portado de siguiente_plan.py) ================= */
