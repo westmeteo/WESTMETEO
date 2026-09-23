@@ -51,6 +51,9 @@
  /* ---------- resultado (visor + meteo), calcado de siguiente-plan ---------- */
  #app{display:none}
  body.viewer #app{display:block}
+ /* capa de controles flotantes: fija a la altura VISIBLE (100dvh) para que peguen al borde inferior real en móvil; deja pasar el toque al visor */
+ #hud{position:fixed;top:0;left:0;right:0;bottom:0;height:100dvh;z-index:20;pointer-events:none}
+ #hud #compass,#hud #windbtn{pointer-events:auto}
  #ohead{position:fixed;top:0;left:0;right:0;z-index:42;background:#1f3346;border-bottom:1px solid #33506b}
  .obanner{display:block;text-decoration:none;color:inherit;cursor:pointer}
  .obanner .bimg{height:92px;background:#20374f url('banner.jpg') center/contain no-repeat}
@@ -87,14 +90,14 @@
  #compass text{font-family:system-ui,sans-serif;font-weight:800;text-anchor:middle;dominant-baseline:central}
  .windlab{font-size:9.5px;font-weight:800;color:#eaf7ff;white-space:nowrap;pointer-events:none;
    text-shadow:0 1px 2px #000,0 0 3px #000;transform:translate(-50%,-140%)}
- #windbtn{position:absolute;bottom:124px;right:16px;z-index:20;display:none;align-items:center;gap:6px;
+ #windbtn{position:absolute;top:180px;right:12px;z-index:22;display:none;align-items:center;gap:6px;
    background:rgba(12,26,40,.62);backdrop-filter:blur(6px);color:#eaf2f8;border:1px solid #8fd0ff;
    border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;
    filter:drop-shadow(0 4px 10px rgba(0,0,0,.4))}
  #windbtn .wico{color:#8fe08f;font-size:13px;transform:rotate(-20deg);display:inline-block}
  #windbtn.off{opacity:.6;border-color:#5a7590}
  #windbtn.off .wico{color:#7f97a9}
- #windleg{position:absolute;bottom:168px;right:16px;z-index:20;display:none;flex-direction:column;gap:2px;
+ #windleg{position:absolute;top:224px;right:12px;z-index:21;display:none;flex-direction:column;gap:2px;
    background:rgba(12,26,40,.62);backdrop-filter:blur(6px);color:#dfeaf3;border:1px solid rgba(143,208,255,.35);
    border-radius:10px;padding:8px 11px;font-size:11px;line-height:1.5}
  #windleg b{color:#8fd0ff;font-size:11px;margin-bottom:1px}
@@ -211,6 +214,7 @@
     </div>
   </div>
   <div id="aviso">Ruta no visualizable en westmeteo</div>
+  <div id="hud">
   <div id="info"><b>Ruta pintada sobre el terreno</b><br>
    <span id="instrucciones">Arrastra: girar · rueda: zoom · clic dcho: desplazar<br></span>
    <span id="copyright">© @westmeteo · Todos los derechos reservados</span></div>
@@ -236,6 +240,7 @@
     <span><i style="background:#ff9040"></i>30–45</span>
     <span><i style="background:#ff3b3b"></i>&gt;45</span>
     <em>flecha: hacia dónde sopla</em>
+  </div>
   </div>
   <div id="meteo"><div class="wrap">
     <h2 id="mtitulo">Perfil altimétrico con meteo</h2>
@@ -269,7 +274,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 
 /* ================= CONSTANTES (portadas de siguiente_plan.py) ================= */
 const EXAG=1.5, MESH=1568, DRAPE=18.0, CADA_KM=1.5, M_ESFUERZO=100.0, RACHA_FACTOR=1.7, TZ='Europe/Madrid';
-const WIND_PASO=500, WIND_FLOTA=28;   // flechas de viento: una cada 500 m, flotando ~40 m sobre el track
+const WIND_PASO=1400, WIND_FLOTA=28;   // flechas de viento: una cada ~1,4 km (para que quepan grandes), flotando ~40 m sobre el track
 // Regiones con visor 3D (bbox = mismo que los generadores HD). El resto: solo perfil + meteo.
 const REGIONS=[
   {key:'bejar',  nombre:'Sierra de Béjar',  LAT0:40.16,  LAT1:40.48,  LON0:-6.00, LON1:-5.49},
@@ -576,6 +581,10 @@ function ajustarHead(){
   const info=$('info');
   if(getComputedStyle(info).bottom==='auto') info.style.top=(h+6)+'px';
   else info.style.top='';
+  // controles de viento: arriba a la derecha, justo bajo el banner (botón encima, leyenda debajo)
+  const wb=$('windbtn'), wl=$('windleg');
+  if(wb) wb.style.top=(h+10)+'px';
+  if(wl) wl.style.top=(h+52)+'px';
 }
 
 /* ================= VISOR 3D (portado de siguiente_plan.py) ================= */
@@ -769,10 +778,10 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
   }
   function setWind(arrows){
     limpiarWind();
-    const base=MAX*0.0052;   // ~225 m; crece con la intensidad sin solaparse con el paso de 500 m
+    const base=MAX*0.022;   // flechas grandes (~950 m); crecen con la intensidad sin pasarse del paso de 1,4 km
     for(const a of arrows){
-      const v=a.v, len=base*(1+Math.min(v,50)/50*1.25), col=windColor(v);
-      const shaftLen=len*0.66, headLen=len*0.34, rad=len*0.085;
+      const v=a.v, len=base*(1+Math.min(v,50)/50*0.45), col=windColor(v);
+      const shaftLen=len*0.62, headLen=len*0.38, rad=len*0.09;
       const mat=new THREE.MeshBasicMaterial({color:col});
       const grp=new THREE.Group();
       const shaft=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad,shaftLen,8),mat);
@@ -785,7 +794,7 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
       grp.position.set(a.wx,a.wy,a.wz);
       windGroup.add(grp);
       const d=document.createElement('div'); d.className='windlab'; d.textContent=Math.round(v);
-      const lo=new CSS2DObject(d); lo.position.set(a.wx,a.wy+len*0.6,a.wz);
+      const lo=new CSS2DObject(d); lo.position.set(a.wx,a.wy+len*0.28,a.wz);
       windGroup.add(lo); windLabels.push(lo);
     }
     windGroup.visible=windVisible; for(const o of windLabels) o.visible=windVisible;
