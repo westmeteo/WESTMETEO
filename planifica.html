@@ -85,6 +85,22 @@
  #compass{position:absolute;bottom:18px;right:18px;width:96px;height:96px;z-index:20;cursor:pointer;
    filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));user-select:none;display:none}
  #compass text{font-family:system-ui,sans-serif;font-weight:800;text-anchor:middle;dominant-baseline:central}
+ .windlab{font-size:9.5px;font-weight:800;color:#eaf7ff;white-space:nowrap;pointer-events:none;
+   text-shadow:0 1px 2px #000,0 0 3px #000;transform:translate(-50%,-140%)}
+ #windbtn{position:absolute;bottom:124px;right:16px;z-index:20;display:none;align-items:center;gap:6px;
+   background:rgba(12,26,40,.62);backdrop-filter:blur(6px);color:#eaf2f8;border:1px solid #8fd0ff;
+   border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;
+   filter:drop-shadow(0 4px 10px rgba(0,0,0,.4))}
+ #windbtn .wico{color:#8fe08f;font-size:13px;transform:rotate(-20deg);display:inline-block}
+ #windbtn.off{opacity:.6;border-color:#5a7590}
+ #windbtn.off .wico{color:#7f97a9}
+ #windleg{position:absolute;bottom:168px;right:16px;z-index:20;display:none;flex-direction:column;gap:2px;
+   background:rgba(12,26,40,.62);backdrop-filter:blur(6px);color:#dfeaf3;border:1px solid rgba(143,208,255,.35);
+   border-radius:10px;padding:8px 11px;font-size:11px;line-height:1.5}
+ #windleg b{color:#8fd0ff;font-size:11px;margin-bottom:1px}
+ #windleg span{display:flex;align-items:center;gap:6px}
+ #windleg i{width:14px;height:8px;border-radius:2px;display:inline-block}
+ #windleg em{color:#9fb6c8;font-size:10px;margin-top:2px}
  #meteo{position:fixed;inset:52px 0 0 0;z-index:35;display:none;overflow:auto;background:#0f1f30;color:#eaf2f8}
  #meteo.visible{display:block}
  #meteo .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 60px}
@@ -211,6 +227,16 @@
     <text id="cS" x="0" y="34" font-size="11" fill="#eaf2f8">S</text>
     <text id="cW" x="-34" y="0" font-size="11" fill="#eaf2f8">O</text>
   </svg>
+  <button id="windbtn" title="Mostrar/ocultar viento"><span class="wico">➤</span> Viento</button>
+  <div id="windleg">
+    <b>Viento (km/h)</b>
+    <span><i style="background:#8fe08f"></i>&lt;10</span>
+    <span><i style="background:#d6e05a"></i>10–20</span>
+    <span><i style="background:#ffcf6a"></i>20–30</span>
+    <span><i style="background:#ff9040"></i>30–45</span>
+    <span><i style="background:#ff3b3b"></i>&gt;45</span>
+    <em>flecha: hacia dónde sopla</em>
+  </div>
   <div id="meteo"><div class="wrap">
     <h2 id="mtitulo">Perfil altimétrico con meteo</h2>
     <div class="meta" id="mmeta"></div>
@@ -243,6 +269,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 
 /* ================= CONSTANTES (portadas de siguiente_plan.py) ================= */
 const EXAG=1.5, MESH=1568, DRAPE=18.0, CADA_KM=1.5, M_ESFUERZO=100.0, RACHA_FACTOR=1.7, TZ='Europe/Madrid';
+const WIND_PASO=500, WIND_FLOTA=28;   // flechas de viento: una cada 500 m, flotando ~40 m sobre el track
 // Regiones con visor 3D (bbox = mismo que los generadores HD). El resto: solo perfil + meteo.
 const REGIONS=[
   {key:'bejar',  nombre:'Sierra de Béjar',  LAT0:40.16,  LAT1:40.48,  LON0:-6.00, LON1:-5.49},
@@ -277,7 +304,7 @@ const WM02_BIAS={ temperature_2m:0, apparent_temperature:0, wind:0, gust:0, prec
 function wm02(v,key){ return (v==null||isNaN(v))?v : v+(WM02_BIAS[key]||0); }
 
 /* ================= ESTADO (se rellena al generar) ================= */
-let CFG, WP, LOCS, PROF, FILAS=[], DATA, NIVELES=false;
+let CFG, WP, LOCS, PROF, FILAS=[], DATA, NIVELES=false, WINDSAMP=null;
 let RAWGPX='', INPUTS=null, VIS=null;
 
 /* ================= UTILIDADES GEO / GPX / DEM / RITMO ================= */
@@ -443,6 +470,7 @@ async function generar(gpxText, inputs){
 
     // --- marcadores 3D + línea (solo si hay visor) ---
     let BASE=null, P=null, ROUTE=null, MARK=null, TOWNS=null;
+    WINDSAMP=null;
     if(region){
       P={zmin:meta.zmin, zmax:meta.zmax, exag:EXAG};
       const meshZ=new Float32Array(meta.n*meta.n);           // BASE.z = flipud(dem)
@@ -472,6 +500,20 @@ async function generar(gpxText, inputs){
         if(t.lat>region.LAT0 && t.lat<region.LAT1 && t.lon>region.LON0 && t.lon<region.LON1){
           const m=mundo(t.lat,t.lon,0);
           TOWNS.push({n:t.n, x:m[0], y:m[1], z:m[2]});
+        }
+      }
+      // muestras de viento cada ~500 m, flotando sobre el track (posición mundo + waypoint de previsión + cota + hora de paso)
+      WINDSAMP=[]; let _wnext=0;
+      for(let i=0;i<n;i++){
+        if(distM[i]>=_wnext || i===n-1){
+          _wnext=distM[i]+WIND_PASO;
+          let li=0,best=Infinity;
+          for(let k=0;k<uni.length;k++){ const dd=Math.abs(distM[uni[k]]-distM[i]); if(dd<best){best=dd;li=k;} }
+          const el=tMove[i]+paradas.filter(p=>p.dstop<distM[i]).reduce((a,p)=>a+p.secs,0);
+          const m=mundo(lat[i],lon[i],DRAPE+WIND_FLOTA*EXAG);
+          WINDSAMP.push({wx:+m[0].toFixed(1), wy:+m[1].toFixed(1), wz:+m[2].toFixed(1),
+            li, alt:Math.round(ele[i]), elapsed_s:Math.round(el)});
+          if(i===n-1) break;
         }
       }
     }
@@ -508,6 +550,8 @@ function montarResultado(hayVisor, region, inputs, texURL, BASE, P, ROUTE, MARK,
     btnM.onclick=()=>{btnM.classList.add('activa');btnV.classList.remove('activa');pM.classList.add('visible');VIS.setVista(false);
       if(!pM.dataset.cargado){pM.dataset.cargado='1';cargarPrevision();}};
     VIS.setVista(true);
+    // cargamos la previsión ya (aunque estemos en el visor) para pintar el viento sobre el terreno
+    if(!pM.dataset.cargado){pM.dataset.cargado='1';cargarPrevision();}
   }else{
     document.body.classList.remove('viewer');
     // sin visor: solo perfil + meteo, a pantalla completa, con aviso
@@ -711,13 +755,60 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
     if(townObjs.length && (_tf++%5)===0) actualizarTowns();
     renderer.render(scene,camera);labelR.render(scene,camera);})();
 
+  // ---- flechas de viento flotando sobre el track (dir: cola=de dónde viene, punta=hacia dónde sopla) ----
+  const windGroup=new THREE.Group(); scene.add(windGroup);
+  const windLabels=[]; let windVisible=true;
+  function windColor(v){ // km/h -> verde·amarillo·naranja·rojo
+    if(v<10) return 0x8fe08f; if(v<20) return 0xd6e05a; if(v<30) return 0xffcf6a;
+    if(v<45) return 0xff9040; return 0xff3b3b; }
+  function limpiarWind(){
+    for(const o of windLabels){ if(o.element&&o.element.parentNode) o.element.parentNode.removeChild(o.element); }
+    windLabels.length=0;
+    while(windGroup.children.length){ const c=windGroup.children.pop();
+      if(c.geometry) c.geometry.dispose(); if(c.material) c.material.dispose(); }
+  }
+  function setWind(arrows){
+    limpiarWind();
+    const base=MAX*0.0052;   // ~225 m; crece con la intensidad sin solaparse con el paso de 500 m
+    for(const a of arrows){
+      const v=a.v, len=base*(1+Math.min(v,50)/50*1.25), col=windColor(v);
+      const shaftLen=len*0.66, headLen=len*0.34, rad=len*0.085;
+      const mat=new THREE.MeshBasicMaterial({color:col});
+      const grp=new THREE.Group();
+      const shaft=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad,shaftLen,8),mat);
+      shaft.rotation.z=-Math.PI/2; shaft.position.x=shaftLen/2-len/2;   // cola en -X (origen del viento)
+      const head=new THREE.Mesh(new THREE.ConeGeometry(rad*2.7,headLen,12),mat);
+      head.rotation.z=-Math.PI/2; head.position.x=len/2-headLen/2;      // punta en +X (hacia donde sopla)
+      grp.add(shaft); grp.add(head);
+      const betaTo=(a.dir+180)*Math.PI/180;      // dir=de dónde viene; +180 = hacia dónde sopla
+      grp.rotation.y=Math.PI/2-betaTo;           // alinea +X local con el flujo (N=-Z, E=+X)
+      grp.position.set(a.wx,a.wy,a.wz);
+      windGroup.add(grp);
+      const d=document.createElement('div'); d.className='windlab'; d.textContent=Math.round(v);
+      const lo=new CSS2DObject(d); lo.position.set(a.wx,a.wy+len*0.6,a.wz);
+      windGroup.add(lo); windLabels.push(lo);
+    }
+    windGroup.visible=windVisible; for(const o of windLabels) o.visible=windVisible;
+    const wb=$('windbtn'); if(wb){ wb.style.display=arrows.length?'flex':'none'; wb.classList.toggle('off',!windVisible); }
+    const wl=$('windleg'); if(wl) wl.style.display=(windVisible&&arrows.length)?'flex':'none';
+  }
+  { const wb=$('windbtn'); if(wb) wb.addEventListener('click',()=>{
+      windVisible=!windVisible; windGroup.visible=windVisible;
+      for(const o of windLabels) o.visible=windVisible;
+      wb.classList.toggle('off',!windVisible);
+      const wl=$('windleg'); if(wl) wl.style.display=(windVisible&&windGroup.children.length)?'flex':'none';
+    }); }
+
   function setVista(v){
     renderer.domElement.style.display=v?'block':'none';
     labelR.domElement.style.display=v?'block':'none';
     $('compass').style.display=v?'block':'none';
     $('info').style.display=v?'block':'none';
+    const wb=$('windbtn'), wl=$('windleg');
+    if(wb) wb.style.display=(v&&windGroup.children.length)?'flex':'none';
+    if(wl) wl.style.display=(v&&windVisible&&windGroup.children.length)?'flex':'none';
   }
-  return {renderer,labelR,setVista};
+  return {renderer,labelR,setVista,setWind};
 }
 
 /* ================= PREVISION (Open-Meteo) · portado de siguiente_plan.py ================= */
@@ -808,6 +899,17 @@ function render(data,niveles){
       cielo:isNaN(wc)?'–':(WMO[Math.round(wc)]||'–')};
   });
   dibujarPerfil(); dibujarResumen(); dibujarTabla();
+  // flechas de viento sobre el visor 3D (a la cota real cuando hay niveles)
+  if(VIS && VIS.setWind && WINDSAMP && WINDSAMP.length){
+    const arrows=WINDSAMP.map(s=>{
+      const loc=data[s.li]||data[0]; const tms=t0+s.elapsed_s*1000;
+      let v=interp(loc,'wind_speed_10m',tms), dr=interp(loc,'wind_direction_10m',tms);
+      if(niveles){ const vc=vientoCota(loc,tms,s.alt); if(!isNaN(vc[0])){v=vc[0];dr=vc[1];} }
+      v=wm02(v,'wind');
+      return {wx:s.wx,wy:s.wy,wz:s.wz,v:nn(v),dir:dr};
+    }).filter(a=>a.v!=null && !isNaN(a.dir));
+    VIS.setWind(arrows);
+  }
   $('fuente').textContent='Previsión: Open-Meteo · corrección WM0.2 de @westmeteo · Viento a la cota real y racha = viento × '+CFG.racha_factor+' · @westmeteo';
 }
 function tempEn(km){
