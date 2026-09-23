@@ -493,7 +493,10 @@ function ajustarHead(){
   const h=$('ohead').offsetHeight;
   $('meteo').style.top=h+'px';
   $('aviso').style.top=h+'px';
-  $('info').style.top=(h+6)+'px';
+  // #info: en escritorio va arriba (bajo el banner); en móvil va anclado abajo (bottom) -> no forzar top
+  const info=$('info');
+  if(getComputedStyle(info).bottom==='auto') info.style.top=(h+6)+'px';
+  else info.style.top='';
 }
 
 /* ================= VISOR 3D (portado de siguiente_plan.py) ================= */
