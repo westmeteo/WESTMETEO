@@ -459,7 +459,10 @@ sel.addEventListener('change',cargar);
 cargar();
 
 /* === POPUP EXPLICATIVO DE NUBES (toca las barras A/M/B) === */
-const nubePop=document.getElementById('nubePop'), nubeBack=document.getElementById('nubeBack');
+const nubeBack=document.createElement('div'); nubeBack.id='nubeBack';
+const nubePop=document.createElement('div'); nubePop.id='nubePop';
+nubePop.setAttribute('role','dialog'); nubePop.setAttribute('aria-label','Nubosidad por niveles');
+document.body.appendChild(nubeBack); document.body.appendChild(nubePop);
 function cerrarNubePop(){ nubePop.classList.remove('show'); nubeBack.classList.remove('show'); }
 nubeBack.addEventListener('click',cerrarNubePop);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') cerrarNubePop(); });
@@ -621,7 +624,5 @@ fc.addEventListener('submit',async e=>{
   }
 });
 </script>
-<div id="nubeBack"></div>
-<div id="nubePop" role="dialog" aria-label="Nubosidad por niveles"></div>
 </body>
 </html>
