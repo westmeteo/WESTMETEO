@@ -63,12 +63,27 @@
  .fv{font-size:.82rem;color:#a3c0d8;text-align:right;white-space:nowrap}
  .fv .flecha{display:inline-block;color:#5ea0cc}
  /* columna nubes: 3 barras baja/media/alta */
- .nubes{display:flex;flex-direction:column;gap:2px;padding-left:10px}
+ .nubes{display:flex;flex-direction:column;gap:2px;padding-left:10px;cursor:pointer}
  .nubes .fila{display:flex;align-items:center;gap:6px}
  .nubes .et{font-size:.62rem;color:#6c93b3;width:14px;text-transform:uppercase}
  .nubes .barra{flex:1;height:6px;background:#22384c;border-radius:3px;overflow:hidden}
  .nubes .rell{display:block;height:100%;border-radius:3px}
  .rell.baja{background:#3a82d6}.rell.media{background:#5aa6e6}.rell.alta{background:#8fc9f2}
+ #nubeBack{position:fixed;inset:0;z-index:59;background:rgba(0,0,0,.4);display:none}
+ #nubeBack.show{display:block}
+ #nubePop{position:fixed;z-index:60;left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);
+   background:#12212f;border:1px solid #3a80c4;border-radius:14px;padding:16px 18px 14px;
+   width:min(320px,calc(100% - 40px));box-shadow:0 12px 44px rgba(0,0,0,.6);display:none;opacity:0;
+   transition:opacity .12s,transform .12s}
+ #nubePop.show{display:block;opacity:1;transform:translate(-50%,-50%) scale(1)}
+ #nubePop h4{font-family:'Oswald',sans-serif;letter-spacing:1px;color:#8fd0ff;margin:0 0 12px;font-size:1.02rem}
+ #nubePop .np-row{display:flex;align-items:center;gap:11px;margin:9px 0}
+ #nubePop .np-sw{width:26px;height:9px;border-radius:5px;flex:none}
+ #nubePop .np-tx{flex:1;font-size:.82rem;color:#cfe0ee;line-height:1.25}
+ #nubePop .np-tx b{color:#fff;font-size:.9rem}
+ #nubePop .np-tx small{color:#7fa7c6}
+ #nubePop .np-pct{font-family:'Oswald',sans-serif;font-size:1.15rem;color:#fff;min-width:46px;text-align:right}
+ #nubePop .np-foot{font-size:.72rem;color:#7fa7c6;margin-top:12px;border-top:1px solid #24405a;padding-top:9px}
  .cabnubes{font-size:.62rem;color:#6c93b3;text-transform:uppercase;letter-spacing:1px}
  #estado{padding:16px 0;text-align:center;color:#7fa7c6}
 
@@ -427,7 +442,7 @@ function render(d,loc){
       <span class="fh">${String(t.getHours()).padStart(2,'0')}h</span>
       <span class="fi">${icono(tot,pr,sn,t.getHours())}</span>
       <span class="ft">${temp!=null?Math.round(temp)+'°':'–'}</span>
-      <span class="nubes">${barra('A',hi)}${barra('M',mid)}${barra('B',lo)}</span>
+      <span class="nubes" data-a="${hi==null?'':Math.round(hi)}" data-m="${mid==null?'':Math.round(mid)}" data-b="${lo==null?'':Math.round(lo)}">${barra('A',hi)}${barra('M',mid)}${barra('B',lo)}</span>
       <span class="fll">${pr>0?pr.toFixed(1)+'mm':'0'}</span>
       <span class="fv"><span class="flecha" style="transform:rotate(${vd+180}deg)">↑</span> ${rumbo} ${vv}${vg>vv+10?' <span style="color:#e0994a">('+vg+')</span>':''}</span>
     </div>`;
@@ -442,6 +457,22 @@ function render(d,loc){
 
 sel.addEventListener('change',cargar);
 cargar();
+
+/* === POPUP EXPLICATIVO DE NUBES (toca las barras A/M/B) === */
+const nubePop=document.getElementById('nubePop'), nubeBack=document.getElementById('nubeBack');
+function cerrarNubePop(){ nubePop.classList.remove('show'); nubeBack.classList.remove('show'); }
+nubeBack.addEventListener('click',cerrarNubePop);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') cerrarNubePop(); });
+document.getElementById('tabla').addEventListener('click',e=>{
+  const n=e.target.closest('.nubes'); if(!n) return;
+  const fmt=v=> (v===''||v==null) ? '<span style="color:#6c93b3">s/d</span>' : v+'%';
+  nubePop.innerHTML=`<h4>Nubes por niveles</h4>
+    <div class="np-row"><span class="np-sw" style="background:#8fc9f2"></span><span class="np-tx"><b>A · Altas</b><br><small>cirros, por encima de ~6 km</small></span><span class="np-pct">${fmt(n.dataset.a)}</span></div>
+    <div class="np-row"><span class="np-sw" style="background:#5aa6e6"></span><span class="np-tx"><b>M · Medias</b><br><small>entre ~2 y 6 km</small></span><span class="np-pct">${fmt(n.dataset.m)}</span></div>
+    <div class="np-row"><span class="np-sw" style="background:#3a82d6"></span><span class="np-tx"><b>B · Bajas</b><br><small>por debajo de ~2 km</small></span><span class="np-pct">${fmt(n.dataset.b)}</span></div>
+    <div class="np-foot">El icono del tiempo combina los tres niveles. Toca fuera para cerrar.</div>`;
+  nubePop.classList.add('show'); nubeBack.classList.add('show');
+});
 
 /* === ESTACIONES (red Ecowitt @westmeteo, ya corregidas en el servidor) === */
 const estCards=document.getElementById('estCards');
@@ -590,5 +621,7 @@ fc.addEventListener('submit',async e=>{
   }
 });
 </script>
+<div id="nubeBack"></div>
+<div id="nubePop" role="dialog" aria-label="Nubosidad por niveles"></div>
 </body>
 </html>
