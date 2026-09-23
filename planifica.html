@@ -915,7 +915,8 @@ async function exportarPDF(){
   const titulo=(INPUTS.titulo||'Planifica tu ruta');
   let y=12;
   try{ const lg=await cargarImagen('banner.jpg'); const w=64, h=w*lg.h/lg.w;
-    doc.addImage(lg.data,'JPEG',14,y,w,h); y+=h+6; }
+    const pageW=doc.internal.pageSize.getWidth();
+    doc.addImage(lg.data,'JPEG',(pageW-w)/2,y,w,h); y+=h+12; }
   catch(e){ y=16; }
   doc.setFontSize(16); doc.setTextColor(26,58,92); doc.text(titulo,14,y); y+=7;
   doc.setFontSize(9); doc.setTextColor(90);
