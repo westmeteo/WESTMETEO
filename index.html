@@ -22,12 +22,15 @@
  .ig svg{width:16px;height:16px}
 
  /* NAV PESTAÑAS */
- nav{position:sticky;top:0;z-index:30;display:flex;justify-content:center;gap:4px;flex-wrap:wrap;
+ nav{position:sticky;top:0;z-index:30;display:flex;flex-direction:column;align-items:center;
    background:#1f3346;border-bottom:1px solid #33506b;padding:0 10px}
- nav button{font-family:'Oswald',sans-serif;font-size:.9rem;letter-spacing:2px;text-transform:uppercase;
-   background:none;border:none;color:#7fa7c6;padding:16px 20px;cursor:pointer;border-bottom:3px solid transparent;transition:all .18s}
- nav button:hover{color:#cfe3f4}
+ .navrow{display:flex;justify-content:center;gap:4px;flex-wrap:wrap}
+ nav button,nav a.navlink{font-family:'Oswald',sans-serif;font-size:.9rem;letter-spacing:2px;text-transform:uppercase;
+   background:none;border:none;color:#7fa7c6;padding:14px 20px;cursor:pointer;border-bottom:3px solid transparent;
+   transition:all .18s;text-decoration:none;display:inline-block}
+ nav button:hover,nav a.navlink:hover{color:#cfe3f4}
  nav button.activa{color:#fff;border-bottom-color:#48b5e0}
+ nav a.navlink{color:#9ecbe8}
 
  main{max-width:820px;margin:0 auto;padding:34px 18px 70px}
  .panel{display:none} .panel.activa{display:block}
@@ -135,8 +138,10 @@
 
  @media(max-width:600px){
    .banner{height:210px}.tagband .tagline{font-size:.74rem;letter-spacing:2px}
-   nav{flex-wrap:nowrap;gap:0;padding:0 2px}
-   nav button{padding:12px 2px;font-size:.98rem;letter-spacing:0;flex:1 1 0;min-width:0;white-space:nowrap}
+   nav{padding:0 2px}
+   .navrow{flex-wrap:nowrap;gap:0;width:100%}
+   nav button,nav a.navlink{padding:11px 2px;font-size:.92rem;letter-spacing:0;flex:1 1 0;min-width:0;
+     white-space:normal;line-height:1.15;text-align:center}
    .franja{grid-template-columns:44px 32px 46px 1fr 50px 60px;gap:5px;padding:7px 8px}
    .fi{font-size:1.1rem}.ft{font-size:.95rem}.fv{font-size:.72rem}
    .visores{grid-template-columns:1fr}
@@ -158,11 +163,16 @@
 </header>
 
 <nav>
-  <button class="activa" data-tab="prevision">Previsión</button>
-  <button data-tab="estacion">Estaciones</button>
-  <button data-tab="partes">Partes</button>
-  <button data-tab="visores">Visores</button>
-  <button data-tab="contacto">Contacto</button>
+  <div class="navrow">
+    <button class="activa" data-tab="prevision">Previsión</button>
+    <button data-tab="estacion">Estaciones</button>
+    <button data-tab="partes">Partes</button>
+  </div>
+  <div class="navrow">
+    <button data-tab="visores">Visores</button>
+    <a class="navlink" href="planifica.html">Planifica tu ruta</a>
+    <button data-tab="contacto">Contacto</button>
+  </div>
 </nav>
 
 <main>

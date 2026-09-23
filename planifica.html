@@ -1,0 +1,881 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Planifica tu ruta · @westmeteo</title>
+<style>
+ :root{--marino:#1a3a5c;--azul:#2980b9;--gris:#f2f5f7}
+ html,body{margin:0;height:100%;background:#0c1a28;font-family:system-ui,sans-serif;color:#eaf2f8}
+ body{overflow:auto}
+ body.viewer{overflow:hidden;touch-action:none}
+ canvas{touch-action:none}
+ a{color:#8fd0ff}
+
+ /* ---------- pantalla de configuracion ---------- */
+ #setup{min-height:100%;box-sizing:border-box;padding:26px 16px 60px;display:flex;flex-direction:column;align-items:center}
+ #setup .box{width:100%;max-width:720px}
+ #setup h1{font-size:24px;margin:6px 0 2px;color:#fff}
+ #setup h1 .sub{display:block;font-size:13px;font-weight:600;color:#8fd0ff;margin-top:4px}
+ #setup .intro{color:#9fb6c8;font-size:13.5px;line-height:1.5;margin:10px 0 18px}
+ .card{background:#13273b;border:1px solid rgba(143,208,255,.14);border-radius:14px;padding:16px 16px;margin:12px 0}
+ .card h3{margin:0 0 10px;font-size:14px;color:#8fd0ff;letter-spacing:.3px;text-transform:uppercase}
+ label{display:block;font-size:12.5px;color:#cfe0ee;margin:8px 0 3px}
+ input,select,textarea{width:100%;box-sizing:border-box;background:#0f2033;border:1px solid rgba(143,208,255,.22);
+   border-radius:9px;color:#eaf2f8;font:14px system-ui,sans-serif;padding:9px 11px}
+ textarea{resize:vertical;min-height:52px}
+ .row{display:flex;gap:12px;flex-wrap:wrap}
+ .row>div{flex:1;min-width:130px}
+ #drop{border:2px dashed rgba(143,208,255,.4);border-radius:12px;padding:22px 14px;text-align:center;
+   cursor:pointer;background:#0f2033;transition:.15s}
+ #drop.hover{border-color:#8fd0ff;background:#12293f}
+ #drop b{color:#fff} #drop .gpxname{display:block;margin-top:8px;color:#78dcaa;font-weight:700;font-size:13px}
+ .paradas .parada{display:flex;gap:8px;align-items:end;margin:6px 0}
+ .paradas .parada>div{flex:1}
+ .btn{font:700 14px system-ui,sans-serif;border:none;border-radius:10px;padding:11px 18px;cursor:pointer}
+ .btn-primario{background:var(--azul);color:#fff}
+ .btn-primario:hover{background:#2f90cf}
+ .btn-sec{background:rgba(255,255,255,.08);color:#cfe0ee;border:1px solid rgba(143,208,255,.3)}
+ .mini{font:700 12px system-ui;border:1px solid rgba(143,208,255,.3);background:rgba(255,255,255,.06);
+   color:#cfe0ee;border-radius:8px;padding:6px 10px;cursor:pointer}
+ #generar{margin-top:14px;width:100%;font-size:16px;padding:14px}
+ #setupError{color:#ffb4b4;font-size:13px;margin-top:10px;min-height:0}
+ .foot{color:#7f97a9;font-size:11px;margin-top:16px;text-align:center}
+ .radio-tabs{display:flex;gap:6px;margin-bottom:6px}
+ .radio-tabs button{flex:1;font:600 12.5px system-ui;color:#cfe0ee;background:rgba(255,255,255,.06);
+   border:1px solid rgba(143,208,255,.25);border-radius:8px;padding:8px 4px;cursor:pointer}
+ .radio-tabs button.on{background:var(--azul);color:#fff;border-color:var(--azul)}
+
+ /* ---------- resultado (visor + meteo), calcado de siguiente-plan ---------- */
+ #app{display:none}
+ body.viewer #app{display:block}
+ #topbar{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;align-items:center;gap:14px;
+   padding:8px 14px;background:linear-gradient(180deg,rgba(12,26,40,.82),rgba(12,26,40,.35));backdrop-filter:blur(6px)}
+ #ptitle{color:#eaf2f8;font-weight:800;font-size:17px;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #ptitle .sub{color:#8fd0ff;font-weight:600;font-size:12px;margin-left:8px}
+ #tabs{display:flex;gap:8px;margin-left:auto}
+ .tab{font:600 13px system-ui,sans-serif;color:#cfe0ee;background:rgba(255,255,255,.08);
+   border:1px solid rgba(143,208,255,.35);border-radius:999px;padding:7px 14px;cursor:pointer}
+ .tab.activa{background:#2980b9;color:#fff;border-color:#2980b9}
+ #btnNueva{font:600 12px system-ui;color:#cfe0ee;background:rgba(255,255,255,.06);
+   border:1px solid rgba(143,208,255,.3);border-radius:999px;padding:7px 12px;cursor:pointer}
+ #aviso{position:fixed;top:52px;left:0;right:0;z-index:39;background:rgba(192,57,43,.92);color:#fff;
+   text-align:center;font-weight:700;font-size:13px;padding:8px 12px;display:none}
+ #aviso.show{display:block}
+ #info{position:absolute;top:58px;left:16px;color:#eaf2f8;font-size:12px;background:rgba(12,26,40,.5);
+   backdrop-filter:blur(6px);padding:8px 12px;border-radius:10px;line-height:1.5;max-width:calc(100vw - 180px)}
+ #info b{color:#8fd0ff}
+ #copyright{font-size:10px;opacity:.75}
+ .wp{font-size:11px;font-weight:800;white-space:nowrap;pointer-events:none;
+   text-shadow:0 1px 2px #000,0 0 4px #000;transform:translate(-50%,-135%);padding:1px 3px;border-radius:4px}
+ .wp-ini{color:#fff;background:rgba(41,128,185,.85)}
+ .wp-alto{color:#0c1a28;background:rgba(255,207,106,.9)}
+ .wp-parada{color:#0c1a28;background:rgba(120,220,170,.92)}
+ #compass{position:absolute;bottom:18px;right:18px;width:96px;height:96px;z-index:20;cursor:pointer;
+   filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));user-select:none;display:none}
+ #compass text{font-family:system-ui,sans-serif;font-weight:800;text-anchor:middle;dominant-baseline:central}
+ #meteo{position:fixed;inset:52px 0 0 0;z-index:35;display:none;overflow:auto;background:#0f1f30;color:#eaf2f8}
+ #meteo.visible{display:block}
+ #meteo .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 60px}
+ #meteo h2{margin:6px 0 2px;font-size:17px;color:#fff}
+ #meteo .meta{color:#9fb6c8;font-size:12.5px;margin-bottom:6px}
+ #meteo .notas{color:#cfe0ee;font-size:13px;margin:2px 0 12px;white-space:pre-wrap}
+ #modelo{display:inline-block;font-weight:700;padding:5px 11px;border-radius:999px;
+   background:rgba(41,128,185,.22);border:1px solid rgba(143,208,255,.4);color:#cfe6ff;font-size:12.5px}
+ #modelo.arome{background:rgba(46,160,110,.2);border-color:rgba(120,220,170,.5);color:#c7f2dd}
+ #acciones{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 2px}
+ #perfilBox{position:relative}
+ svg#perfil{width:100%;height:auto;display:block}
+ .resumen{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 2px}
+ .rz{background:#0f2033;border:1px solid rgba(143,208,255,.14);border-radius:10px;padding:8px 12px;min-width:96px}
+ .rz b{display:block;font-size:18px;color:#fff}
+ .rz span{font-size:11px;color:#9fb6c8}
+ table.tramos{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+ table.tramos th,table.tramos td{padding:6px 7px;text-align:center;border-bottom:1px solid rgba(143,208,255,.1)}
+ table.tramos th{color:#8fd0ff;font-weight:700;position:sticky;top:0;background:#13273b}
+ table.tramos td.izq{text-align:left}
+ .fuente{color:#7f97a9;font-size:11px;margin-top:14px}
+ #estado{padding:26px 4px;color:#9fb6c8;font-size:13px}
+ #cargando{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+   background:rgba(12,26,40,.86);color:#eaf2f8;font-size:15px;font-weight:600;text-align:center}
+ #cargando.show{display:flex}
+ @media(max-width:640px){
+   #topbar{flex-wrap:wrap;gap:8px;padding:7px 10px}
+   #ptitle{font-size:15px;width:100%}
+   #tabs{margin-left:0;width:100%}
+   .tab{flex:1;text-align:center;padding:8px 6px}
+   #info{top:auto;bottom:14px;left:12px;right:auto;max-width:calc(100vw - 120px);font-size:11px}
+   #meteo{inset:96px 0 0 0}
+   #instrucciones{display:none}
+ }
+</style></head><body>
+
+<!-- ===================== PANTALLA DE CONFIGURACION ===================== -->
+<div id="setup"><div class="box">
+  <h1>Planifica tu ruta<span class="sub">Sube tu GPX y obtén perfil, previsión por tramos y, si cae en zona cubierta, terreno 3D · @westmeteo</span></h1>
+  <p class="intro">La previsión usa AROME HD (Météo-France) o ECMWF-IFS, con la corrección WM0.2 de @westmeteo. El perfil y el desnivel se calculan sobre el modelo de elevación del terreno. Todo se procesa en tu navegador; el GPX no sale de tu dispositivo salvo que generes un enlace para compartir.</p>
+
+  <div class="card">
+    <h3>1 · Tu track</h3>
+    <div id="drop">
+      <b>Arrastra aquí tu archivo .gpx</b><br>o pulsa para elegirlo
+      <span class="gpxname" id="gpxname"></span>
+    </div>
+    <input type="file" id="file" accept=".gpx,application/gpx+xml,text/xml" style="display:none">
+    <label style="margin-top:12px">Título de la ruta (opcional)</label>
+    <input type="text" id="titulo" placeholder="Mi ruta">
+    <label>Notas (opcional)</label>
+    <textarea id="notas" placeholder="Material, avituallamientos, contactos…"></textarea>
+  </div>
+
+  <div class="card">
+    <h3>2 · Día y hora de salida</h3>
+    <div class="row">
+      <div><label>Fecha</label><input type="date" id="fecha"></div>
+      <div><label>Hora de salida</label><input type="time" id="hora" value="09:00"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>3 · Ritmo</h3>
+    <div class="radio-tabs" id="modoRitmo">
+      <button data-modo="pace" class="on">Ritmo min/km</button>
+      <button data-modo="tiempo">Tiempo total</button>
+      <button data-modo="velocidad">Velocidad media</button>
+    </div>
+    <div id="ritmoPace"><label>Ritmo medio (min/km, sobre distancia real)</label><input type="number" id="pace" value="17" step="0.5" min="3" max="60"></div>
+    <div id="ritmoTiempo" style="display:none"><label>Tiempo total en movimiento (horas, sin paradas)</label><input type="number" id="tiempo" value="4" step="0.25" min="0.25"></div>
+    <div id="ritmoVel" style="display:none"><label>Velocidad media (km/h)</label><input type="number" id="velocidad" value="4" step="0.5" min="1" max="30"></div>
+    <p class="foot" style="text-align:left;margin:8px 0 0">El reparto por tramos aplica la regla de los 100 (100 m de desnivel positivo equivalen a 1 km llano), así que sube más lento y baja más rápido.</p>
+  </div>
+
+  <div class="card paradas">
+    <h3>4 · Paradas (opcional)</h3>
+    <div id="listaParadas"></div>
+    <button type="button" class="mini" id="addParada">+ Añadir parada</button>
+  </div>
+
+  <button class="btn btn-primario" id="generar">Generar plan</button>
+  <div id="setupError"></div>
+  <div class="foot">© @westmeteo · Todos los derechos reservados</div>
+</div></div>
+
+<!-- ===================== RESULTADO ===================== -->
+<div id="app">
+  <div id="topbar">
+    <div id="ptitle"></div>
+    <div id="tabs">
+      <button id="btnVisor" class="tab activa">Visor Ruta</button>
+      <button id="btnMeteo" class="tab">Perfil altimétrico con meteo</button>
+      <button id="btnNueva">Nueva ruta</button>
+    </div>
+  </div>
+  <div id="aviso">Ruta no visualizable en westmeteo</div>
+  <div id="info"><b>Ruta pintada sobre el terreno</b><br>
+   <span id="instrucciones">Arrastra: girar · rueda: zoom · clic dcho: desplazar<br></span>
+   <span id="copyright">© @westmeteo · Todos los derechos reservados</span></div>
+  <svg id="compass" viewBox="-50 -50 100 100">
+    <circle r="47" fill="rgba(12,26,40,.55)" stroke="#8fd0ff" stroke-width="1.4"/>
+    <circle r="40" fill="none" stroke="#8fd0ff" stroke-width="0.6" opacity="0.5"/>
+    <g id="cneedle">
+      <polygon points="0,-38 -7,0 0,-6 7,0" fill="#c0392b"/>
+      <polygon points="0,38 -7,0 0,6 7,0" fill="#eaf2f8"/>
+      <circle r="3.2" fill="#0c1a28" stroke="#8fd0ff" stroke-width="0.8"/>
+    </g>
+    <text id="cN" x="0" y="-34" font-size="13" fill="#ff6b6b">N</text>
+    <text id="cE" x="34" y="0" font-size="11" fill="#eaf2f8">E</text>
+    <text id="cS" x="0" y="34" font-size="11" fill="#eaf2f8">S</text>
+    <text id="cW" x="-34" y="0" font-size="11" fill="#eaf2f8">O</text>
+  </svg>
+  <div id="meteo"><div class="wrap">
+    <h2 id="mtitulo">Perfil altimétrico con meteo</h2>
+    <div class="meta" id="mmeta"></div>
+    <div class="notas" id="mnotas"></div>
+    <div id="modelo">Cargando previsión…</div>
+    <div id="acciones">
+      <button class="btn btn-sec" id="btnPDF">Descargar PDF del plan</button>
+      <button class="btn btn-sec" id="btnCompartir">Copiar enlace para compartir</button>
+    </div>
+    <div class="card" id="perfilBox"><div id="estado">Consultando Open-Meteo…</div></div>
+    <div class="card"><div class="resumen" id="resumen"></div></div>
+    <div class="card" style="overflow:auto"><table class="tramos" id="tabla"></table></div>
+    <div class="fuente" id="fuente"></div>
+  </div></div>
+</div>
+<div id="cargando">Cargando…</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script type="importmap">{"imports":{
+ "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+ "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+
+/* ================= CONSTANTES (portadas de siguiente_plan.py) ================= */
+const EXAG=1.5, MESH=1568, DRAPE=18.0, CADA_KM=1.5, M_ESFUERZO=100.0, RACHA_FACTOR=1.7, TZ='Europe/Madrid';
+// Regiones con visor 3D (bbox = mismo que los generadores HD). El resto: solo perfil + meteo.
+const REGIONS=[
+  {key:'bejar',  nombre:'Sierra de Béjar',  LAT0:40.16,  LAT1:40.48,  LON0:-6.00, LON1:-5.49},
+  {key:'gredos', nombre:'Sierra de Gredos', LAT0:40.115, LAT1:40.385, LON0:-5.49, LON1:-5.06},
+];
+// Corrección WM0.2 (sesgo del modelo). Valores por rellenar; la etiqueta "+ WM0.2" aparece siempre.
+const WM02_BIAS={ temperature_2m:0, apparent_temperature:0, wind:0, gust:0, precipitation:0 };
+function wm02(v,key){ return (v==null||isNaN(v))?v : v+(WM02_BIAS[key]||0); }
+
+/* ================= ESTADO (se rellena al generar) ================= */
+let CFG, WP, LOCS, PROF, FILAS=[], DATA, NIVELES=false;
+let RAWGPX='', INPUTS=null, VIS=null;
+
+/* ================= UTILIDADES GEO / GPX / DEM / RITMO ================= */
+function haversine_m(la1,lo1,la2,lo2){
+  const R=6371000, p1=la1*Math.PI/180, p2=la2*Math.PI/180;
+  const dphi=(la2-la1)*Math.PI/180, dl=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dphi/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+function parseGPX(text){
+  const doc=new DOMParser().parseFromString(text,'application/xml');
+  if(doc.querySelector('parsererror')) throw new Error('GPX no válido');
+  const pts=[...doc.getElementsByTagName('*')].filter(e=>{const t=e.localName;return t==='trkpt'||t==='rtept';});
+  const lat=[],lon=[],ele=[];
+  for(const p of pts){
+    const la=parseFloat(p.getAttribute('lat')), lo=parseFloat(p.getAttribute('lon'));
+    if(isNaN(la)||isNaN(lo)) continue;
+    let e=null;
+    for(const c of p.children){ if(c.localName==='ele'){ e=parseFloat(c.textContent); } }
+    lat.push(la); lon.push(lo); ele.push(isNaN(e)?null:e);
+  }
+  if(lat.length<2) throw new Error('El GPX no tiene puntos de track');
+  return {lat,lon,ele};
+}
+function interpNaN(arr){ // rellena huecos null por interpolación lineal sobre el índice
+  const n=arr.length, ok=[]; for(let i=0;i<n;i++) if(arr[i]!=null&&!isNaN(arr[i])) ok.push(i);
+  if(!ok.length) return arr.map(()=>0);
+  const out=arr.slice();
+  for(let i=0;i<n;i++){ if(out[i]!=null&&!isNaN(out[i])) continue;
+    if(i<ok[0]) out[i]=arr[ok[0]]; else if(i>ok[ok.length-1]) out[i]=arr[ok[ok.length-1]];
+    else{ let a=ok[0],b=ok[ok.length-1]; for(const k of ok){ if(k<=i)a=k; if(k>=i){b=k;break;} }
+      out[i]=arr[a]+(arr[b]-arr[a])*((i-a)/((b-a)||1)); } }
+  return out;
+}
+function demSample(dem,n,R,lat,lon){
+  const r=(lat-R.LAT0)/(R.LAT1-R.LAT0)*(n-1);
+  const c=(lon-R.LON0)/(R.LON1-R.LON0)*(n-1);
+  const r0=Math.max(0,Math.min(n-2,Math.floor(r))), c0=Math.max(0,Math.min(n-2,Math.floor(c)));
+  const fr=r-r0, fc=c-c0, g=(rr,cc)=>dem[rr*n+cc];
+  return (g(r0,c0)*(1-fr)+g(r0+1,c0)*fr)*(1-fc)+(g(r0,c0+1)*(1-fr)+g(r0+1,c0+1)*fr)*fc;
+}
+function detectRegion(latmin,latmax,lonmin,lonmax){
+  for(const R of REGIONS)
+    if(latmin>=R.LAT0&&latmax<=R.LAT1&&lonmin>=R.LON0&&lonmax<=R.LON1) return R;
+  return null;
+}
+function tiempoPorPunto(distM,eleM,totalS,mPorKm){
+  const esf=new Array(distM.length).fill(0);
+  for(let i=1;i<distM.length;i++){
+    const dh=distM[i]-distM[i-1], dz=eleM[i]-eleM[i-1];
+    esf[i]=esf[i-1]+dh+(Math.max(dz,0)/mPorKm)*1000;
+  }
+  const tot=esf[esf.length-1];
+  return tot>0 ? esf.map(e=>totalS*e/tot) : esf.map(()=>0);
+}
+function argmin(arr,val){ let bi=0,bd=Infinity; for(let i=0;i<arr.length;i++){const d=Math.abs(arr[i]-val); if(d<bd){bd=d;bi=i;}} return bi; }
+function hhmm(ms){ const d=new Date(ms); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+async function elevacionOpenMeteo(lat,lon){
+  const out=new Array(lat.length).fill(null);
+  for(let i=0;i<lat.length;i+=100){
+    const la=lat.slice(i,i+100), lo=lon.slice(i,i+100);
+    const u='https://api.open-meteo.com/v1/elevation?latitude='+la.join(',')+'&longitude='+lo.join(',');
+    const r=await fetch(u); if(!r.ok) throw new Error('elevación '+r.status);
+    const e=(await r.json()).elevation||[];
+    for(let k=0;k<e.length;k++) out[i+k]=e[k];
+  }
+  return out;
+}
+
+/* ================= ORQUESTACION ================= */
+const $=id=>document.getElementById(id);
+function showLoad(t){ $('cargando').textContent=t; $('cargando').classList.add('show'); }
+function hideLoad(){ $('cargando').classList.remove('show'); }
+
+async function generar(gpxText, inputs){
+  try{
+    const setupErr=$('setupError'); setupErr.textContent='';
+    if(!gpxText){
+      if(!RAWGPX){ setupErr.textContent='Elige primero un archivo .gpx.'; return; }
+      gpxText=RAWGPX; inputs=leerInputs();
+    }
+    RAWGPX=gpxText; INPUTS=inputs;
+    showLoad('Procesando el track…');
+
+    // --- GPX + distancias ---
+    const g=parseGPX(gpxText);
+    const lat=g.lat, lon=g.lon, n=lat.length;
+    const distM=new Array(n).fill(0);
+    for(let i=1;i<n;i++) distM[i]=distM[i-1]+haversine_m(lat[i-1],lon[i-1],lat[i],lon[i]);
+    const distKm=distM.map(d=>d/1000);
+    const latmin=Math.min(...lat), latmax=Math.max(...lat), lonmin=Math.min(...lon), lonmax=Math.max(...lon);
+
+    // --- region + elevaciones (DEM si cae dentro; si no, GPX o Open-Meteo) ---
+    const region=detectRegion(latmin,latmax,lonmin,lonmax);
+    let ele, meta=null, dem=null, texURL=null;
+    if(region){
+      showLoad('Cargando terreno de '+region.nombre+'…');
+      meta=await (await fetch(region.key+'_dem.json')).json();
+      const buf=await (await fetch(region.key+'_dem.bin')).arrayBuffer();
+      dem=new Int16Array(buf);
+      texURL={bejar:'vegcol_base_hd_lite.jpg',gredos:'vegcol_gredos_hd_lite.jpg'}[region.key];
+      ele=lat.map((la,i)=>demSample(dem,meta.n,region,la,lon[i]));
+    }else{
+      ele=interpNaN(g.ele);
+      const rango=Math.max(...ele)-Math.min(...ele);
+      if(!isFinite(rango)||rango<1){ showLoad('Obteniendo elevación…'); ele=interpNaN(await elevacionOpenMeteo(lat,lon)); }
+    }
+    const dpos=(()=>{let s=0;for(let i=1;i<n;i++)s+=Math.max(ele[i]-ele[i-1],0);return s;})();
+
+    // --- ritmo (regla de los 100) + paradas ---
+    const distTot=distKm[n-1];
+    const paradas=(inputs.paradas||[]).map(p=>({km:+p.km, secs:Math.round((+p.horas)*3600)}))
+      .filter(p=>!isNaN(p.km)&&p.km>0&&p.km<distTot&&p.secs>0).sort((a,b)=>a.km-b.km);
+    const stopSecs=paradas.reduce((a,p)=>a+p.secs,0);
+    let totalMove;
+    if(inputs.modoRitmo==='tiempo') totalMove=(+inputs.tiempo)*3600;
+    else if(inputs.modoRitmo==='velocidad') totalMove=distTot/(+inputs.velocidad)*3600;
+    else totalMove=(+inputs.pace)*distTot*60;
+    if(!(totalMove>0)) totalMove=17*distTot*60;
+    const paceEff=(totalMove/60)/distTot;                 // min/km efectivo
+    const tMove=tiempoPorPunto(distM,ele,totalMove,M_ESFUERZO);
+    for(const p of paradas){ p.istop=argmin(distKm,p.km); p.dstop=distM[p.istop]; }
+    const salidaStr=inputs.fecha+'T'+inputs.hora;
+    const t0=Date.parse(salidaStr);
+    const metaMs=t0+(tMove[n-1]+stopSecs)*1000;
+
+    // --- waypoints de previsión (cada CADA_KM + paradas + fin) ---
+    const idx=new Set(); for(let o=0;o<=distM[n-1]+1;o+=CADA_KM*1000) idx.add(argmin(distM,o));
+    for(const p of paradas) idx.add(p.istop); idx.add(n-1);
+    const uni=[...idx].sort((a,b)=>a-b);
+    const liDe={}; uni.forEach((i,k)=>liDe[i]=k);
+    LOCS=uni.map(i=>({lat:+lat[i].toFixed(5), lon:+lon[i].toFixed(5)}));
+    WP=[];
+    for(const i of uni){
+      const base={km:+distKm[i].toFixed(2), alt:Math.round(ele[i]), li:liDe[i]};
+      const stop=paradas.find(p=>p.istop===i);
+      if(stop){
+        const antes=paradas.filter(p=>p.dstop<stop.dstop).reduce((a,p)=>a+p.secs,0);
+        const arr=tMove[i]+antes, dep=arr+stop.secs;
+        WP.push({...base, elapsed_s:Math.round(arr), hora:hhmm(t0+arr*1000), parada:'llegada', pkm:stop.km});
+        WP.push({...base, elapsed_s:Math.round(dep), hora:hhmm(t0+dep*1000), parada:'salida', pkm:stop.km});
+      }else{
+        const el=tMove[i]+paradas.filter(p=>p.dstop<distM[i]).reduce((a,p)=>a+p.secs,0);
+        WP.push({...base, elapsed_s:Math.round(el), hora:hhmm(t0+el*1000)});
+      }
+    }
+
+    // --- perfil decimado (~260 puntos) ---
+    const npf=Math.min(260,n), sel=[];
+    for(let k=0;k<npf;k++) sel.push(Math.round(k*(n-1)/(npf-1||1)));
+    PROF={ d:sel.map(i=>+distKm[i].toFixed(3)), z:sel.map(i=>+ele[i].toFixed(1)) };
+
+    CFG={ salida:salidaStr, meta:new Date(metaMs).toISOString().slice(0,16),
+      fecha:inputs.fecha, fecha_fin:new Date(t0+86400000).toISOString().slice(0,10),
+      tz:TZ, dist_km:+distTot.toFixed(2), dpos:Math.round(dpos),
+      cota_min:Math.round(Math.min(...ele)), cota_max:Math.round(Math.max(...ele)),
+      pace:+paceEff.toFixed(1), racha_factor:RACHA_FACTOR,
+      paradas:paradas.map(p=>({km:p.km, horas:+(p.secs/3600).toFixed(2)})),
+      niveles:[925,900,850,800,700] };
+    // CFG.meta/fecha_fin: usar hora LOCAL de salida como eje (evita corrimiento de zona)
+    CFG.meta=salidaStr.slice(0,11)+hhmm(metaMs);
+    { const d=new Date(t0+86400000); CFG.fecha_fin=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+    // --- marcadores 3D + línea (solo si hay visor) ---
+    let BASE=null, P=null, ROUTE=null, MARK=null;
+    if(region){
+      P={zmin:meta.zmin, zmax:meta.zmax, exag:EXAG};
+      const meshZ=new Float32Array(meta.n*meta.n);           // BASE.z = flipud(dem)
+      for(let r=0;r<meta.n;r++) for(let c=0;c<meta.n;c++) meshZ[r*meta.n+c]=dem[(meta.n-1-r)*meta.n+c];
+      BASE={n:meta.n, W:meta.W, H:meta.H, z:meshZ};
+      const mundo=(la,lo,off)=>{
+        const x=((lo-region.LON0)/(region.LON1-region.LON0)-0.5)*meta.W;
+        const zc=-(((la-region.LAT0)/(region.LAT1-region.LAT0))-0.5)*meta.H;
+        const y=(demSample(dem,meta.n,region,la,lo)-meta.zmin)*EXAG+off;
+        return [x,y,zc];
+      };
+      const step=Math.max(1,Math.floor(n/700)); ROUTE=[];
+      for(let i=0;i<n;i+=step){ const m=mundo(lat[i],lon[i],DRAPE); ROUTE.push(+m[0].toFixed(1),+m[1].toFixed(1),+m[2].toFixed(1)); }
+      { const m=mundo(lat[n-1],lon[n-1],DRAPE); ROUTE.push(+m[0].toFixed(1),+m[1].toFixed(1),+m[2].toFixed(1)); }
+      let imax=0; for(let i=1;i<n;i++) if(ele[i]>ele[imax]) imax=i;
+      const ms=mundo(lat[0],lon[0],DRAPE+40), mh=mundo(lat[imax],lon[imax],DRAPE+40);
+      MARK=[
+        {n:`Salida ${inputs.hora} · Meta ~${hhmm(metaMs)}`, x:ms[0],y:ms[1],z:ms[2], cls:'wp wp-ini'},
+        {n:`Punto alto ${Math.round(ele[imax])} m`, x:mh[0],y:mh[1],z:mh[2], cls:'wp wp-alto'},
+      ];
+      for(const p of paradas){ const mp=mundo(lat[p.istop],lon[p.istop],DRAPE+40);
+        MARK.push({n:`Parada ${(p.secs/3600).toFixed(1).replace('.0','')} h · km ${String(p.km).replace('.',',')}`, x:mp[0],y:mp[1],z:mp[2], cls:'wp wp-parada'}); }
+    }
+
+    // --- montar interfaz ---
+    montarResultado(!!region, region, inputs, texURL, BASE, P, ROUTE, MARK);
+    hideLoad();
+  }catch(err){
+    hideLoad();
+    const setupErr=$('setupError');
+    if($('setup').style.display!=='none') setupErr.textContent='No se pudo generar: '+err.message;
+    else alert('No se pudo generar: '+err.message);
+    console.error(err);
+  }
+}
+
+function montarResultado(hayVisor, region, inputs, texURL, BASE, P, ROUTE, MARK){
+  $('setup').style.display='none'; $('app').style.display='block';
+  const titulo=inputs.titulo?inputs.titulo:'Planifica tu ruta';
+  $('ptitle').innerHTML=titulo+'<span class="sub">'+(region?region.nombre:'ruta libre')+' · @westmeteo</span>';
+  $('mtitulo').textContent=titulo==='Planifica tu ruta'?'Perfil altimétrico con meteo':titulo;
+  $('mnotas').textContent=inputs.notas||'';
+  const paraTxt=CFG.paradas.length?` · ${CFG.paradas.length} parada${CFG.paradas.length>1?'s':''}`:'';
+  $('mmeta').textContent=`${CFG.dist_km.toFixed(1).replace('.',',')} km · D+ ${CFG.dpos} m · ${CFG.cota_min}–${CFG.cota_max} m · `+
+    `salida ${inputs.hora} · ritmo ${CFG.pace} min/km${paraTxt} · meta ~${CFG.meta.slice(11)}`;
+
+  if(hayVisor){
+    document.body.classList.add('viewer');
+    $('tabs').style.display='flex'; $('aviso').classList.remove('show');
+    VIS=initVisor(BASE,P,ROUTE,MARK,texURL);
+    // pestañas
+    const btnV=$('btnVisor'), btnM=$('btnMeteo'), pM=$('meteo');
+    btnV.onclick=()=>{btnV.classList.add('activa');btnM.classList.remove('activa');pM.classList.remove('visible');VIS.setVista(true);};
+    btnM.onclick=()=>{btnM.classList.add('activa');btnV.classList.remove('activa');pM.classList.add('visible');VIS.setVista(false);
+      if(!pM.dataset.cargado){pM.dataset.cargado='1';cargarPrevision();}};
+    VIS.setVista(true);
+  }else{
+    document.body.classList.remove('viewer');
+    // sin visor: solo perfil + meteo, a pantalla completa, con aviso
+    $('btnVisor').style.display='none'; $('btnMeteo').style.display='none';
+    $('info').style.display='none';
+    $('aviso').classList.add('show');
+    $('meteo').classList.add('visible'); $('meteo').style.top='0';
+    $('meteo').style.inset='92px 0 0 0';
+    cargarPrevision();
+  }
+  $('btnNueva').onclick=()=>{ location.href=location.pathname; };
+  $('btnPDF').onclick=exportarPDF;
+  $('btnCompartir').onclick=compartir;
+}
+
+/* ================= VISOR 3D (portado de siguiente_plan.py) ================= */
+function initVisor(BASE,P,ROUTE,MARK,texURL){
+  const MAX=Math.max(BASE.W,BASE.H), relieve=(P.zmax-P.zmin)*P.exag;
+  const scene=new THREE.Scene();
+  const renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setClearColor(0xbcd4e6);
+  renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.02;
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+  const labelR=new CSS2DRenderer(); labelR.setSize(innerWidth,innerHeight);
+  labelR.domElement.style.cssText='position:absolute;top:0;left:0;pointer-events:none';
+  document.body.appendChild(labelR.domElement);
+  const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,1,200000);
+  camera.position.set(0, relieve*2.2+MAX*0.5, BASE.H*0.75);
+  const controls=new OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true; controls.dampingFactor=0.06; controls.maxPolarAngle=Math.PI*0.49;
+  controls.enableZoom=false;
+  controls.enablePan=true; controls.screenSpacePanning=true; controls.panSpeed=2.6; controls.rotateSpeed=2.8;
+  controls.touches.ONE=-1; controls.touches.TWO=THREE.TOUCH.DOLLY_ROTATE;
+  controls.target.set(0, relieve*0.3, 0);
+
+  const _ray=new THREE.Raycaster(), _m=new THREE.Vector2(); let _zv=0, _focus=controls.target.clone();
+  function _focusFrom(px,py){ _m.x=(px/innerWidth)*2-1; _m.y=-(py/innerHeight)*2+1;
+    _ray.setFromCamera(_m,camera); const o=_ray.ray.origin,d=_ray.ray.direction;
+    if(Math.abs(d.y)>1e-4){const t=(controls.target.y-o.y)/d.y; if(t>0)_focus=o.clone().add(d.clone().multiplyScalar(t));} }
+  let _panPrev=null, _panY=0;
+  function _groundAt(px,py,planeY){ _m.x=(px/innerWidth)*2-1; _m.y=-(py/innerHeight)*2+1;
+    _ray.setFromCamera(_m,camera); const o=_ray.ray.origin,d=_ray.ray.direction;
+    if(Math.abs(d.y)<1e-4)return null; const t=(planeY-o.y)/d.y; if(t<=0)return null;
+    return o.clone().add(d.clone().multiplyScalar(t)); }
+  renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();e.stopPropagation();
+    _focusFrom(e.clientX,e.clientY); _zv+=(e.deltaY<0?1:-1)*0.16; },{passive:false,capture:true});
+  const _tch=new Map(); let _pinch=0, _pmid=null, _accD=0, _accM=0, _g2=0;
+  function _dist(){const p=[..._tch.values()];return Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);}
+  function _mid(){const p=[..._tch.values()];return[(p[0].x+p[1].x)/2,(p[0].y+p[1].y)/2];}
+  function _setPivot(px,py){ _m.x=(px/innerWidth)*2-1; _m.y=-(py/innerHeight)*2+1;
+    _ray.setFromCamera(_m,camera); const o=_ray.ray.origin,d=_ray.ray.direction;
+    if(Math.abs(d.y)>0.05){const t=(controls.target.y-o.y)/d.y;
+      if(t>0){const p=o.clone().add(d.clone().multiplyScalar(t));
+        if(Math.abs(p.x)<MAX && Math.abs(p.z)<MAX) controls.target.set(p.x, controls.target.y, p.z);}} }
+  renderer.domElement.addEventListener('pointerdown',e=>{ _zv=0;
+    if(e.pointerType==='touch'){_tch.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(_tch.size===1){_panY=controls.target.y;_panPrev=_groundAt(e.clientX,e.clientY,_panY);}
+      else if(_tch.size===2){_pinch=_dist();_pmid=_mid();_accD=0;_accM=0;_g2=0;}} },{capture:true});
+  renderer.domElement.addEventListener('pointermove',e=>{
+    if(e.pointerType!=='touch'||!_tch.has(e.pointerId))return;
+    _tch.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(_tch.size===1){ _zv=0;
+      const now=_groundAt(e.clientX,e.clientY,_panY);
+      if(now&&_panPrev){const dx=_panPrev.x-now.x, dz=_panPrev.z-now.z;
+        camera.position.x+=dx;camera.position.z+=dz;controls.target.x+=dx;controls.target.z+=dz;} }
+    else if(_tch.size===2){e.preventDefault();
+      const d=_dist(), m=_mid(); _accD+=Math.abs(d-_pinch);
+      if(_pmid) _accM+=Math.hypot(m[0]-_pmid[0], m[1]-_pmid[1]);
+      if(_g2===0 && (_accD+_accM)>10){ _g2=(_accD>=_accM)?1:2; if(_g2===2) _setPivot(m[0],m[1]); }
+      if(_g2===1){ e.stopPropagation(); _focusFrom(m[0],m[1]); _zv+=(d-_pinch)*0.016; }
+      else if(_g2===2){ _zv=0; }
+      _pinch=d; _pmid=m;} },{passive:false,capture:true});
+  function _end(e){if(_tch.delete(e.pointerId)&&_tch.size<2){_pinch=0;_pmid=null;_g2=0;_zv=0;
+    if(_tch.size===1){const p=[..._tch.values()][0];_panY=controls.target.y;_panPrev=_groundAt(p.x,p.y,_panY);}}}
+  renderer.domElement.addEventListener('pointerup',_end,{capture:true});
+  renderer.domElement.addEventListener('pointercancel',_end,{capture:true});
+  function applyZoom(){ if(Math.abs(_zv)<1e-4)return;
+    const s=Math.max(-0.4,Math.min(0.4,_zv*0.22));
+    const dist=camera.position.distanceTo(controls.target);
+    if(!((s>0&&dist<80)||(s<0&&dist>MAX*2.4))){camera.position.lerp(_focus,s);controls.target.lerp(_focus,s);}
+    _zv*=0.82; }
+
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(140000,32,16),
+    new THREE.ShaderMaterial({side:THREE.BackSide,uniforms:{top:{value:new THREE.Color(0x2b6fb0)},bot:{value:new THREE.Color(0xcfe3f2)}},
+      vertexShader:`varying vec3 vp;void main(){vp=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+      fragmentShader:`varying vec3 vp;uniform vec3 top;uniform vec3 bot;void main(){float h=clamp(vp.y/140000.*1.6+.35,0.,1.);gl_FragColor=vec4(mix(bot,top,h),1.);}`})));
+  scene.fog=new THREE.Fog(0xbcd4e6, MAX*1.2, MAX*3.0);
+
+  const lineMat=new LineMaterial({color:0xff2b2b, linewidth:4.2, worldUnits:false, transparent:true, depthTest:true, dashed:false});
+  lineMat.resolution.set(innerWidth,innerHeight);
+
+  (async()=>{
+    const tex=await new THREE.TextureLoader().loadAsync(texURL);
+    tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    const g=new THREE.PlaneGeometry(BASE.W,BASE.H,BASE.n-1,BASE.n-1);
+    const pos=g.attributes.position;
+    for(let i=0;i<pos.count;i++) pos.setZ(i,(BASE.z[i]-P.zmin)*P.exag);
+    g.computeVertexNormals();
+    const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({map:tex,roughness:.95,metalness:0}));
+    mesh.rotation.x=-Math.PI/2; mesh.receiveShadow=true; mesh.castShadow=true; scene.add(mesh);
+
+    const lg=new LineGeometry(); lg.setPositions(ROUTE);
+    const rline=new Line2(lg,lineMat); rline.computeLineDistances(); scene.add(rline);
+    const lgb=new LineGeometry(); lgb.setPositions(ROUTE);
+    const matB=new LineMaterial({color:0x5c0000,linewidth:7.5,worldUnits:false,transparent:true,opacity:.55,depthTest:true});
+    matB.resolution.set(innerWidth,innerHeight);
+    const rlineB=new Line2(lgb,matB); scene.add(rlineB); rlineB.renderOrder=0; rline.renderOrder=1;
+
+    for(const m of MARK){ const d=document.createElement('div'); d.className=m.cls; d.textContent=m.n;
+      const o=new CSS2DObject(d); o.position.set(m.x,m.y,m.z); scene.add(o); }
+
+    const sol=new THREE.DirectionalLight(0xfff4e0,2.0);
+    sol.position.set(-BASE.W*0.5,relieve+MAX*0.8,BASE.H*0.45); sol.castShadow=true; sol.shadow.mapSize.set(2048,2048);
+    const sc=sol.shadow.camera,Rr=MAX*0.7; sc.left=-Rr;sc.right=Rr;sc.top=Rr;sc.bottom=-Rr;sc.near=1;sc.far=MAX*4;sc.updateProjectionMatrix();
+    scene.add(sol); scene.add(new THREE.HemisphereLight(0xbcd8ff,0x4a3b2a,.55)); scene.add(new THREE.AmbientLight(0xffffff,.18));
+    encuadrarRuta();
+  })();
+
+  function encuadrarRuta(){
+    let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;
+    for(let i=0;i<ROUTE.length;i+=3){x0=Math.min(x0,ROUTE[i]);x1=Math.max(x1,ROUTE[i]);z0=Math.min(z0,ROUTE[i+2]);z1=Math.max(z1,ROUTE[i+2]);}
+    const cx=(x0+x1)/2, cz=(z0+z1)/2, span=Math.max(x1-x0,z1-z0);
+    controls.target.set(cx, relieve*0.35, cz);
+    camera.position.set(cx, relieve*1.4+span*1.2, cz+span*1.35);
+  }
+
+  const _v0=new THREE.Vector3(), _v1=new THREE.Vector3(), _north=new THREE.Vector3(0,0,-1);
+  const cN=$('cN'),cE=$('cE'),cS=$('cS'),cW=$('cW'), cneedle=$('cneedle'), RLAB=34;
+  function brujula(){
+    _v0.copy(controls.target); _v1.copy(controls.target).addScaledVector(_north,MAX*0.1);
+    _v0.project(camera); _v1.project(camera);
+    const deg=Math.atan2(_v1.x-_v0.x,_v1.y-_v0.y)*180/Math.PI;
+    cneedle.setAttribute('transform',`rotate(${deg})`);
+    const set=(el,off)=>{const a=(deg+off)*Math.PI/180;el.setAttribute('x',(RLAB*Math.sin(a)).toFixed(1));el.setAttribute('y',(-RLAB*Math.cos(a)).toFixed(1));};
+    set(cN,0); set(cE,90); set(cS,180); set(cW,270);
+  }
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);labelR.setSize(innerWidth,innerHeight);lineMat.resolution.set(innerWidth,innerHeight);});
+  let _snapN=0;
+  $('compass').addEventListener('click',()=>{_snapN=1;});
+  function orientarNorte(){ if(!_snapN)return;
+    const off=camera.position.clone().sub(controls.target);
+    const sph=new THREE.Spherical().setFromVector3(off);
+    const th=Math.atan2(Math.sin(sph.theta),Math.cos(sph.theta));
+    if(Math.abs(th)<0.002){sph.theta=0;_snapN=0;} else sph.theta=th*0.82;
+    off.setFromSpherical(sph); camera.position.copy(controls.target).add(off); }
+  (function loop(){requestAnimationFrame(loop);applyZoom();orientarNorte();controls.update();brujula();renderer.render(scene,camera);labelR.render(scene,camera);})();
+
+  function setVista(v){
+    renderer.domElement.style.display=v?'block':'none';
+    labelR.domElement.style.display=v?'block':'none';
+    $('compass').style.display=v?'block':'none';
+    $('info').style.display=v?'block':'none';
+  }
+  return {renderer,labelR,setVista};
+}
+
+/* ================= PREVISION (Open-Meteo) · portado de siguiente_plan.py ================= */
+const HVARS=["temperature_2m","apparent_temperature","precipitation","wind_speed_10m",
+  "wind_gusts_10m","wind_direction_10m","cloud_cover","freezing_level_height","weather_code"];
+const WMO={0:"Despejado",1:"Casi despejado",2:"Parcial",3:"Cubierto",45:"Niebla",48:"Niebla helada",
+  51:"Llovizna",53:"Llovizna",55:"Llovizna fuerte",56:"Llovizna helada",57:"Llovizna helada",
+  61:"Lluvia débil",63:"Lluvia",65:"Lluvia fuerte",66:"Lluvia helada",67:"Lluvia helada",
+  71:"Nieve débil",73:"Nieve",75:"Nieve fuerte",77:"Cinarra",80:"Chubascos",81:"Chubascos",
+  82:"Chubascos fuertes",85:"Chubascos nieve",86:"Chubascos nieve",95:"Tormenta",96:"Tormenta granizo",99:"Tormenta fuerte"};
+function VARS(){ let v=HVARS.slice(); for(const n of CFG.niveles) v.push(`wind_speed_${n}hPa`,`wind_direction_${n}hPa`,`geopotential_height_${n}hPa`); return v; }
+function urlModelo(modelo){
+  const lats=LOCS.map(w=>w.lat).join(','), lons=LOCS.map(w=>w.lon).join(',');
+  const p=new URLSearchParams({latitude:lats,longitude:lons,hourly:VARS().join(','),
+    timezone:CFG.tz,windspeed_unit:'kmh',start_date:CFG.fecha,end_date:CFG.fecha_fin,models:modelo});
+  return 'https://api.open-meteo.com/v1/forecast?'+p.toString();
+}
+async function pedir(modelo){ const r=await fetch(urlModelo(modelo)); if(!r.ok) throw new Error(modelo+' '+r.status);
+  let d=await r.json(); if(!Array.isArray(d)) d=[d]; return d; }
+function epochs(times){ return times.map(t=>Date.parse(t)); }
+function interp(loc,v,tms){
+  const h=loc.hourly; if(!h||!h[v]) return NaN;
+  const xs=epochs(h.time), ys=h[v];
+  let lo=-1; for(let i=0;i<xs.length;i++){ if(ys[i]==null||isNaN(ys[i]))continue; if(xs[i]<=tms)lo=i; }
+  let hi=-1; for(let i=0;i<xs.length;i++){ if(ys[i]==null||isNaN(ys[i]))continue; if(xs[i]>=tms){hi=i;break;} }
+  if(lo<0&&hi<0) return NaN; if(lo<0) return ys[hi]; if(hi<0||hi===lo) return ys[lo];
+  const f=(tms-xs[lo])/(xs[hi]-xs[lo]); return ys[lo]+(ys[hi]-ys[lo])*f;
+}
+function vientoCota(loc,tms,alt){
+  const hs=[],ws=[],ds=[];
+  for(const n of CFG.niveles){ const h=interp(loc,`geopotential_height_${n}hPa`,tms);
+    const w=interp(loc,`wind_speed_${n}hPa`,tms); const d=interp(loc,`wind_direction_${n}hPa`,tms);
+    if(!isNaN(h)&&!isNaN(w)){hs.push(h);ws.push(w);ds.push(d);} }
+  if(hs.length<2) return [NaN,NaN];
+  const o=hs.map((_,i)=>i).sort((a,b)=>hs[a]-hs[b]);
+  const H=o.map(i=>hs[i]),Ws=o.map(i=>ws[i]),Ds=o.map(i=>ds[i]);
+  const lin=(xa,ya)=>{ if(alt<=xa[0])return ya[0]; if(alt>=xa[xa.length-1])return ya[ya.length-1];
+    for(let i=0;i<xa.length-1;i++){ if(alt<=xa[i+1]){const f=(alt-xa[i])/(xa[i+1]-xa[i]);return ya[i]+(ya[i+1]-ya[i])*f;}} return ya[ya.length-1]; };
+  return [lin(H,Ws),lin(H,Ds)];
+}
+function cubre(data){
+  const loc=data[0]; if(!loc||!loc.hourly||!loc.hourly.temperature_2m) return false;
+  const t0=Date.parse(CFG.salida), t1=Date.parse(CFG.meta);
+  const xs=epochs(loc.hourly.time), ys=loc.hourly.temperature_2m; let ok=0,tot=0;
+  for(let i=0;i<xs.length;i++){ if(xs[i]>=t0-3600e3&&xs[i]<=t1+3600e3){tot++; if(ys[i]!=null&&!isNaN(ys[i]))ok++;} }
+  return tot>0 && ok===tot;
+}
+const dircard=d=>{ if(isNaN(d))return'–'; const c=["N","NE","E","SE","S","SO","O","NO"]; return c[Math.round(d/45)%8]; };
+const nn=(x,dec=0)=> (x==null||isNaN(x))?null:(dec?Math.round(x*10**dec)/10**dec:Math.round(x));
+
+async function cargarPrevision(){
+  const elMod=$('modelo');
+  try{
+    let data, modelo, etiqueta, niveles;
+    const arome=await pedir('meteofrance_arome_france_hd').catch(()=>null);
+    if(arome&&cubre(arome)){ data=arome; niveles=false; etiqueta='AROME HD · Météo-France (1,3 km)'; modelo='arome'; }
+    else{ const ec=await pedir('ecmwf_ifs025'); if(!cubre(ec)) throw new Error('sin datos para la fecha');
+      data=ec; niveles=true; etiqueta='ECMWF-IFS · global (~9 km)'; modelo='ecmwf'; }
+    elMod.className=(modelo==='arome')?'arome':'';
+    elMod.textContent='Modelo: '+etiqueta+' + WM0.2'+(niveles?' · viento interpolado a tu cota (niveles 925–700 hPa)':' · viento 10 m nativo de alta resolución');
+    DATA=data; NIVELES=niveles; render(data,niveles);
+  }catch(err){
+    $('estado').textContent='No se pudo cargar la previsión ('+err.message+'). Reintenta con conexión abierta.';
+    elMod.textContent='Previsión no disponible';
+  }
+}
+function tempColor(t){
+  if(t==null||isNaN(t)) return '#7f97a9';
+  const lo=Math.min(0, ...FILAS.map(f=>f.temp).filter(v=>v!=null));
+  const hi=Math.max(20, ...FILAS.map(f=>f.temp).filter(v=>v!=null));
+  const f=Math.max(0,Math.min(1,(t-lo)/(hi-lo+1e-6))); return `hsl(${((1-f)*220).toFixed(0)},75%,50%)`;
+}
+function render(data,niveles){
+  const t0=Date.parse(CFG.salida);
+  FILAS=WP.map((w)=>{
+    const loc=data[w.li]||data[0]; const tms=t0+w.elapsed_s*1000;
+    const temp=wm02(interp(loc,'temperature_2m',tms),'temperature_2m');
+    const sens=wm02(interp(loc,'apparent_temperature',tms),'apparent_temperature');
+    const v10=interp(loc,'wind_speed_10m',tms); const g10=interp(loc,'wind_gusts_10m',tms);
+    let v=v10, dr=interp(loc,'wind_direction_10m',tms);
+    if(niveles){ const vc=vientoCota(loc,tms,w.alt); if(!isNaN(vc[0])){v=vc[0];dr=vc[1];} }
+    v=wm02(v,'wind');
+    let racha=isNaN(v)?g10:v*CFG.racha_factor; racha=wm02(racha,'gust');
+    const wc=interp(loc,'weather_code',tms);
+    return {km:w.km,alt:w.alt,hora:w.hora,parada:w.parada||null,pkm:w.pkm,
+      temp:nn(temp,1),sens:nn(sens,1),precip:nn(wm02(interp(loc,'precipitation',tms),'precipitation'),1),
+      viento:nn(v),racha:nn(racha),dir:dr,nubes:nn(interp(loc,'cloud_cover',tms)),
+      cielo:isNaN(wc)?'–':(WMO[Math.round(wc)]||'–')};
+  });
+  dibujarPerfil(); dibujarResumen(); dibujarTabla();
+  $('fuente').textContent='Previsión: Open-Meteo · corrección WM0.2 de @westmeteo · Viento a la cota real y racha = viento × '+CFG.racha_factor+' · @westmeteo';
+}
+function tempEn(km){
+  const Pf=FILAS.filter(f=>f.temp!=null); if(!Pf.length) return null;
+  const xs=Pf.map(f=>f.km), ys=Pf.map(f=>f.temp);
+  if(km<=xs[0])return ys[0]; if(km>=xs[xs.length-1])return ys[ys.length-1];
+  for(let i=0;i<xs.length-1;i++){ if(xs[i+1]===xs[i])continue; if(km<=xs[i+1]){const f=(km-xs[i])/(xs[i+1]-xs[i]);return ys[i]+(ys[i+1]-ys[i])*f;}}
+  return ys[ys.length-1];
+}
+function dibujarPerfil(){
+  const box=$('perfilBox');
+  const Wv=Math.min(1040, box.clientWidth||1040), Hv=312;
+  const padL=44,padR=14,padT=16,padB=48;
+  const d=PROF.d, z=PROF.z, dmax=d[d.length-1], zmn=Math.min(...z), zmx=Math.max(...z);
+  const X=km=>padL+(km/dmax)*(Wv-padL-padR);
+  const Y=m=>Hv-padB-((m-zmn)/((zmx-zmn)||1))*(Hv-padT-padB);
+  let seg='';
+  for(let i=0;i<d.length-1;i++){ const c=tempColor(tempEn((d[i]+d[i+1])/2));
+    seg+=`<line x1="${X(d[i]).toFixed(1)}" y1="${Y(z[i]).toFixed(1)}" x2="${X(d[i+1]).toFixed(1)}" y2="${Y(z[i+1]).toFixed(1)}" stroke="${c}" stroke-width="3.4" stroke-linecap="round"/>`; }
+  let area=`M ${X(d[0])} ${Y(zmn)} `;
+  for(let i=0;i<d.length;i++) area+=`L ${X(d[i]).toFixed(1)} ${Y(z[i]).toFixed(1)} `;
+  area+=`L ${X(d[d.length-1])} ${Y(zmn)} Z`;
+  let ejes='';
+  for(let k=0;k<=4;k++){ const mm=zmn+(zmx-zmn)*k/4, yy=Y(mm);
+    ejes+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${Wv-padR}" y2="${yy.toFixed(1)}" stroke="rgba(143,208,255,.14)"/>`;
+    ejes+=`<text x="6" y="${(yy+3).toFixed(1)}" fill="#9fb6c8" font-size="10">${Math.round(mm)}</text>`; }
+  for(let km=0;km<=Math.ceil(dmax);km+=2){ const xx=X(km);
+    ejes+=`<text x="${xx.toFixed(1)}" y="${(Hv-padB+16).toFixed(1)}" fill="#9fb6c8" font-size="10" text-anchor="middle">${km}</text>`; }
+  // bandas de parada (una por parada configurada)
+  let banda='';
+  for(const par of CFG.paradas){
+    const xb=X(par.km);
+    const pll=FILAS.find(f=>f.parada==='llegada'&&f.pkm===par.km), psa=FILAS.find(f=>f.parada==='salida'&&f.pkm===par.km);
+    const tt=f=>(f&&f.temp!=null)?` ${f.temp}°`:'';
+    const hs=(par.horas%1===0)?par.horas:par.horas.toFixed(1);
+    banda+=`<line x1="${xb.toFixed(1)}" y1="${padT}" x2="${xb.toFixed(1)}" y2="${(Hv-padB).toFixed(1)}" stroke="#78dcaa" stroke-width="1.5" stroke-dasharray="4 3"/>`+
+      `<text x="${xb.toFixed(1)}" y="${(padT+11).toFixed(1)}" fill="#78dcaa" font-size="10.5" font-weight="800" text-anchor="middle">Parada ${hs} h</text>`+
+      `<text x="${xb.toFixed(1)}" y="${(padT+24).toFixed(1)}" fill="#cfe6da" font-size="9" text-anchor="middle">${pll?pll.hora:''}${tt(pll)} → ${psa?psa.hora:''}${tt(psa)}</text>`;
+  }
+  let mk='';
+  FILAS.forEach((f,j)=>{ if(f.parada) return; const xx=X(f.km), yy=Y(zEn(f.km));
+    mk+=`<circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="2.6" fill="#0c1a28" stroke="#fff" stroke-width="1"/>`;
+    if(f.temp!=null) mk+=`<text x="${xx.toFixed(1)}" y="${(yy+14).toFixed(1)}" fill="#ffd9d9" font-size="9.5" font-weight="700" text-anchor="middle">${f.temp}°</text>`;
+    if(j%2===0) mk+=`<text x="${xx.toFixed(1)}" y="${(yy-8).toFixed(1)}" fill="#cfe0ee" font-size="9" text-anchor="middle">${f.hora}</text>`; });
+  box.innerHTML=`<svg id="perfil" viewBox="0 0 ${Wv} ${Hv}" preserveAspectRatio="xMidYMid meet">
+    <rect x="0" y="0" width="${Wv}" height="${Hv}" fill="#0f1f30"/>
+    <path d="${area}" fill="rgba(200,215,228,.10)"/>${ejes}${banda}${seg}${mk}
+    <text x="${padL}" y="12" fill="#8fd0ff" font-size="10">Altitud (m)</text>
+    <text x="${Wv-padR}" y="${Hv-5}" fill="#8fd0ff" font-size="10" text-anchor="end">Distancia (km)</text>
+  </svg>`;
+}
+function zEn(km){ const d=PROF.d,z=PROF.z; if(km<=d[0])return z[0]; if(km>=d[d.length-1])return z[z.length-1];
+  for(let i=0;i<d.length-1;i++){ if(km<=d[i+1]){const f=(km-d[i])/(d[i+1]-d[i]);return z[i]+(z[i+1]-z[i])*f;}} return z[z.length-1]; }
+function dibujarResumen(){
+  const ts=FILAS.map(f=>f.temp).filter(v=>v!=null), rs=FILAS.map(f=>f.racha).filter(v=>v!=null), ps=FILAS.map(f=>f.precip).filter(v=>v!=null);
+  const pac=ps.reduce((a,b)=>a+b,0);
+  const rz=(v,s)=>`<div class="rz"><b>${v}</b><span>${s}</span></div>`;
+  $('resumen').innerHTML=
+    rz(ts.length?`${Math.min(...ts)}–${Math.max(...ts)}°`:'–','Temperatura')+
+    rz(rs.length?Math.max(...rs)+' km/h':'–','Racha máx.')+
+    rz(ps.length?Math.max(...ps)+' mm/h':'–','Precip. máx.')+
+    rz(pac.toFixed(1)+' mm','Acum. aprox.');
+}
+function dibujarTabla(){
+  let h='<tr><th class="izq">Km</th><th>Hora</th><th>Alt</th><th>T °C</th><th>Sens</th><th>Viento</th><th>Racha</th><th>Dir</th><th>Precip</th><th>Cielo</th></tr>';
+  for(const f of FILAS){
+    const par=f.parada, tr=par?' style="background:rgba(120,220,170,.13)"':'';
+    const hora=par==='llegada'?f.hora+' llegada':par==='salida'?f.hora+' salida':f.hora;
+    const km=par?f.km+' ⏸':f.km;
+    h+=`<tr${tr}><td class="izq">${km}</td><td>${hora}</td><td>${f.alt}</td>`+
+       `<td>${f.temp??'–'}</td><td>${f.sens??'–'}</td><td>${f.viento??'–'}</td>`+
+       `<td>${f.racha??'–'}</td><td>${dircard(f.dir)}</td><td>${f.precip??'–'}</td><td>${f.cielo}</td></tr>`;
+  }
+  $('tabla').innerHTML=h;
+}
+
+/* ================= PDF ================= */
+function svgToPng(svg,scale=2){
+  return new Promise((res,rej)=>{
+    const vb=svg.viewBox.baseVal, xml=new XMLSerializer().serializeToString(svg);
+    const img=new Image();
+    img.onload=()=>{ const c=document.createElement('canvas'); c.width=vb.width*scale; c.height=vb.height*scale;
+      const ctx=c.getContext('2d'); ctx.fillStyle='#0f1f30'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0,c.width,c.height);
+      res({data:c.toDataURL('image/png'), w:vb.width, h:vb.height}); };
+    img.onerror=rej; img.src='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(xml)));
+  });
+}
+async function exportarPDF(){
+  if(!FILAS.length){ alert('Espera a que cargue la previsión.'); return; }
+  const { jsPDF }=window.jspdf; const doc=new jsPDF('l','mm','a4');
+  const titulo=(INPUTS.titulo||'Planifica tu ruta');
+  doc.setFontSize(16); doc.setTextColor(26,58,92); doc.text(titulo,14,16);
+  doc.setFontSize(9); doc.setTextColor(90);
+  doc.text($('mmeta').textContent,14,23);
+  doc.text($('modelo').textContent,14,29);
+  let y=33;
+  if(INPUTS.notas){ doc.setTextColor(60); const ls=doc.splitTextToSize('Notas: '+INPUTS.notas,270); doc.text(ls,14,y); y+=ls.length*4+2; }
+  const svg=document.querySelector('#perfil');
+  if(svg){ try{ const png=await svgToPng(svg,2); const w=200, h=w*png.h/png.w; doc.addImage(png.data,'PNG',14,y,w,h); y+=h+4; }catch(e){} }
+  const body=FILAS.map(f=>{ const km=f.parada?f.km+' P':f.km;
+    const hora=f.parada==='llegada'?f.hora+' lleg.':f.parada==='salida'?f.hora+' sal.':f.hora;
+    return [km,hora,f.alt,f.temp??'-',f.sens??'-',f.viento??'-',f.racha??'-',dircard(f.dir),f.precip??'-',f.cielo]; });
+  if(doc.autoTable) doc.autoTable({ startY:y+2, head:[['Km','Hora','Alt','T','Sens','Viento','Racha','Dir','Precip','Cielo']],
+    body, styles:{fontSize:7,cellPadding:1.2}, headStyles:{fillColor:[41,128,185]}, margin:{left:14,right:14} });
+  const fecha=(INPUTS.fecha||'').replaceAll('-','');
+  doc.save('plan_'+(titulo.replace(/[^a-z0-9]+/gi,'_').slice(0,30)||'ruta')+'_'+fecha+'.pdf');
+}
+
+/* ================= ENLACE COMPARTIBLE (PHP en Hostinger) ================= */
+async function compartir(){
+  const btn=$('btnCompartir'); const prev=btn.textContent; btn.textContent='Guardando…';
+  try{
+    const r=await fetch('plan_guardar.php',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({gpx:RAWGPX, inputs:INPUTS})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json(); if(!j.ok||!j.id) throw new Error(j.error||'sin id');
+    const url=location.origin+location.pathname+'?p='+encodeURIComponent(j.id);
+    try{ await navigator.clipboard.writeText(url); btn.textContent='Enlace copiado ✓'; }
+    catch(e){ prompt('Copia el enlace para compartir:', url); btn.textContent=prev; }
+    setTimeout(()=>btn.textContent=prev,2500);
+  }catch(err){
+    btn.textContent=prev;
+    alert('El enlace para compartir solo funciona en westmeteo.com. ('+err.message+')');
+  }
+}
+async function cargarCompartido(id){
+  showLoad('Cargando plan compartido…');
+  try{
+    const r=await fetch('plan_cargar.php?id='+encodeURIComponent(id)); if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json(); if(!j.ok||!j.gpx) throw new Error(j.error||'no encontrado');
+    await generar(j.gpx, j.inputs);
+  }catch(err){ hideLoad(); alert('No se pudo cargar el plan compartido: '+err.message); }
+}
+
+/* ================= FORMULARIO ================= */
+function leerInputs(){
+  const modo=document.querySelector('#modoRitmo button.on').dataset.modo;
+  const paradas=[...document.querySelectorAll('#listaParadas .parada')].map(p=>({
+    km:p.querySelector('.pkm').value, horas:p.querySelector('.phoras').value }));
+  return { titulo:$('titulo').value.trim(), notas:$('notas').value.trim(),
+    fecha:$('fecha').value, hora:$('hora').value, modoRitmo:modo,
+    pace:$('pace').value, tiempo:$('tiempo').value, velocidad:$('velocidad').value, paradas };
+}
+function addParada(km='',horas='1'){
+  const div=document.createElement('div'); div.className='parada';
+  div.innerHTML=`<div><label>Km</label><input type="number" class="pkm" step="0.1" min="0" value="${km}"></div>
+    <div><label>Duración (h)</label><input type="number" class="phoras" step="0.25" min="0" value="${horas}"></div>
+    <button type="button" class="mini quitar">✕</button>`;
+  div.querySelector('.quitar').onclick=()=>div.remove();
+  $('listaParadas').appendChild(div);
+}
+function initForm(){
+  // fecha por defecto = mañana
+  const d=new Date(Date.now()+86400000);
+  $('fecha').value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  // carga de fichero (click + arrastrar)
+  const drop=$('drop'), file=$('file');
+  drop.onclick=()=>file.click();
+  file.onchange=()=>{ if(file.files[0]) leerFichero(file.files[0]); };
+  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hover');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hover');}));
+  drop.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) leerFichero(f); });
+  // ritmo (tabs)
+  document.querySelectorAll('#modoRitmo button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#modoRitmo button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+    $('ritmoPace').style.display=b.dataset.modo==='pace'?'block':'none';
+    $('ritmoTiempo').style.display=b.dataset.modo==='tiempo'?'block':'none';
+    $('ritmoVel').style.display=b.dataset.modo==='velocidad'?'block':'none';
+  });
+  $('addParada').onclick=()=>addParada();
+  $('generar').onclick=()=>generar();
+}
+function leerFichero(f){
+  const fr=new FileReader();
+  fr.onload=()=>{ RAWGPX=fr.result; $('gpxname').textContent=f.name; if(!$('titulo').value) $('titulo').value=f.name.replace(/\.gpx$/i,''); };
+  fr.onerror=()=>{ $('setupError').textContent='No se pudo leer el archivo.'; };
+  fr.readAsText(f);
+}
+
+/* ================= ARRANQUE ================= */
+initForm();
+const pid=new URLSearchParams(location.search).get('p');
+if(pid) cargarCompartido(pid);
+</script></body></html>
