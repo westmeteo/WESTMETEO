@@ -79,6 +79,19 @@
  .est-row.big .val{font-size:1.55rem}
  .est-row .u{font-size:.72rem;color:#7fa7c6;font-weight:400;margin-left:3px}
 
+ /* VERIFICACION */
+ .vf-wrap{overflow-x:auto;margin-top:20px}
+ .vf-tabla{width:100%;border-collapse:collapse;font-size:.85rem;min-width:460px}
+ .vf-tabla th,.vf-tabla td{padding:7px 9px;text-align:right;border-bottom:1px solid #2e4b62;white-space:nowrap}
+ .vf-tabla th{font-family:'Oswald',sans-serif;letter-spacing:1px;text-transform:uppercase;color:#5ea0cc;font-size:.7rem;font-weight:500}
+ .vf-tabla td:first-child,.vf-tabla th:first-child{text-align:left;color:#bcd4e6}
+ .vf-tabla tr:nth-child(even) td{background:rgba(255,255,255,.018)}
+ .vf-pos{color:#e0994a}   /* AROME sobreestima */
+ .vf-neg{color:#7fc4ff}   /* AROME subestima */
+ .vf-sub{font-family:'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#8fd0ff;font-size:.85rem;margin:26px 0 4px}
+ .vf-selbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:22px}
+ .vf-selbar label{font-family:'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#7fa7c6;font-size:.8rem}
+
  /* PARTES */
  .prevision{background:linear-gradient(135deg,#2b4a63,#284460);border-left:4px solid #3a7bd5;border-radius:6px;
    padding:22px 26px;margin-bottom:18px;transition:all .25s;box-shadow:0 2px 8px rgba(0,0,0,.12)}
@@ -147,6 +160,7 @@
 <nav>
   <button class="activa" data-tab="prevision">Previsión</button>
   <button data-tab="estacion">Estaciones</button>
+  <button data-tab="verif">Verif.</button>
   <button data-tab="partes">Partes</button>
   <button data-tab="visores">Visores</button>
   <button data-tab="contacto">Contacto</button>
@@ -178,6 +192,17 @@
     <p class="fuente">Observación propia · red de estaciones @westmeteo · <span class="beta">BETA</span></p>
     <div id="estCards" class="est-cards"></div>
     <p class="fuente" id="estPie" style="margin-top:16px">Cargando estaciones…</p>
+  </section>
+
+  <!-- VERIFICACION -->
+  <section class="panel" id="verif">
+    <div class="est-top">
+      <h2>Verificación AROME</h2>
+      <span class="beta">BETA</span>
+    </div>
+    <p class="fuente">Desviación del modelo <b>AROME</b> (Météo-France, vía Open-Meteo) frente a la observación de la estación @westmeteo · sesgo = previsto − observado (positivo = AROME sobreestima)</p>
+    <div id="verifBody"></div>
+    <p class="fuente" id="verifPie" style="margin-top:16px">Cargando verificación…</p>
   </section>
 
   <!-- PARTES -->
@@ -260,6 +285,7 @@ document.querySelectorAll('nav button').forEach(b=>{
     document.querySelectorAll('.panel').forEach(x=>x.classList.remove('activa'));
     b.classList.add('activa');
     document.getElementById(b.dataset.tab).classList.add('activa');
+    if(b.dataset.tab==='verif' && !verifCargada){ verifCargada=true; cargarVerif(); }
   });
 });
 
@@ -420,6 +446,88 @@ async function iniciarEstaciones(){
   }
 }
 iniciarEstaciones();
+
+/* === VERIFICACION (AROME archivada vs estación · solo lectura) === */
+let verifCargada=false, verifData=null;
+function vfBias(o,unit){
+  if(!o || o.n===0 || o.bias===null) return '<span style="color:#6c93b3">–</span>';
+  const s=o.bias>0?'+':'', cls=o.bias>0?'vf-pos':(o.bias<0?'vf-neg':'');
+  return '<span class="'+cls+'">'+s+o.bias+' '+unit+'</span>';
+}
+function vfErr(prev,obs,unit){
+  if(prev==null||obs==null) return '<span style="color:#6c93b3">–</span>';
+  const e=Math.round((prev-obs)*10)/10, s=e>0?'+':'', cls=e>0?'vf-pos':(e<0?'vf-neg':'');
+  return prev+' <span class="'+cls+'">('+s+e+')</span>';
+}
+function vfTablaVar(){
+  if(!verifData) return '';
+  const key=document.getElementById('verifVar').value;
+  const v=verifData.vars.find(x=>x.key===key)||verifData.vars[0];
+  const u=v.unit;
+  let f='<div class="vf-wrap"><table class="vf-tabla"><thead><tr>'+
+    '<th>Hora objetivo</th><th>Observado</th><th>AROME −24h (err)</th><th>AROME −48h (err)</th></tr></thead><tbody>';
+  if(!verifData.recientes.length){
+    f+='<tr><td colspan="4" style="text-align:center;color:#6c93b3">Aún no hay horas con observación. Acumulando…</td></tr>';
+  }
+  for(const r of verifData.recientes){
+    const ov=r.obs?r.obs[key]:null;
+    const p24=r.f24?r.f24[key]:null, p48=r.f48?r.f48[key]:null;
+    const hora=r.t.replace('T',' ').slice(5); // "MM-DD HH:MM"
+    f+='<tr><td>'+hora+'</td>'+
+       '<td>'+(ov!=null?ov+' '+u:'–')+'</td>'+
+       '<td>'+vfErr(p24,ov,u)+'</td>'+
+       '<td>'+vfErr(p48,ov,u)+'</td></tr>';
+  }
+  f+='</tbody></table></div>';
+  return f;
+}
+function vfRender(){
+  document.getElementById('verifTabla').innerHTML=vfTablaVar();
+}
+async function cargarVerif(){
+  const cont=document.getElementById('verifBody');
+  const pie=document.getElementById('verifPie');
+  try{
+    const r=await fetch('verif.php',{cache:'no-store'});
+    const d=await r.json();
+    if(!d.ok){ pie.textContent='No hay datos de verificación todavía.'; return; }
+    verifData=d;
+    // tarjetas de sesgo por variable
+    let cards='';
+    for(const v of d.vars){
+      cards+='<div class="est-card"><h3>'+v.label+' <span class="u">'+v.unit+'</span></h3>'+
+        '<div class="est-row"><span class="lab">Sesgo −24h</span><span class="val">'+vfBias(v.h24,v.unit)+'</span></div>'+
+        '<div class="est-row"><span class="lab">Sesgo −48h</span><span class="val">'+vfBias(v.h48,v.unit)+'</span></div>'+
+        '<div class="est-row"><span class="lab">MAE 24/48h</span><span class="val">'+(v.h24.mae??'–')+' / '+(v.h48.mae??'–')+'</span></div>'+
+        '<div class="est-row"><span class="lab">Casos 24/48h</span><span class="val">'+v.h24.n+' / '+v.h48.n+'</span></div>'+
+        '</div>';
+    }
+    let html='<div class="est-cards">'+cards+'</div>';
+    // temperatura por franja
+    if(d.temp_franjas && d.temp_franjas.length){
+      html+='<div class="vf-sub">Sesgo de temperatura por franja</div>'+
+        '<div class="vf-wrap"><table class="vf-tabla"><thead><tr><th>Franja</th>'+
+        '<th>Sesgo −24h</th><th>Sesgo −48h</th><th>Casos 24/48h</th></tr></thead><tbody>';
+      for(const fr of d.temp_franjas){
+        html+='<tr><td>'+fr.label+'</td><td>'+vfBias(fr.h24,'°C')+'</td><td>'+vfBias(fr.h48,'°C')+'</td>'+
+          '<td>'+fr.h24.n+' / '+fr.h48.n+'</td></tr>';
+      }
+      html+='</tbody></table></div>';
+    }
+    // casos recientes con selector de variable
+    html+='<div class="vf-sub">Casos recientes</div>'+
+      '<div class="vf-selbar"><label for="verifVar">Variable</label><select id="verifVar"></select></div>'+
+      '<div id="verifTabla"></div>';
+    cont.innerHTML=html;
+    const vs=document.getElementById('verifVar');
+    vs.innerHTML=d.vars.map(v=>'<option value="'+v.key+'">'+v.label+'</option>').join('');
+    vs.addEventListener('change',vfRender);
+    vfRender();
+    pie.innerHTML='Actualizado: '+(d.updated||'ahora')+' · '+(d.total||0)+' horas archivadas';
+  }catch(e){
+    pie.textContent='No se pudo cargar la verificación (solo disponible en westmeteo.com).';
+  }
+}
 
 /* === CONTACTO (envío por PHP, con aviso sin recargar) === */
 const fc=document.getElementById('fcontacto');
