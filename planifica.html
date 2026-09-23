@@ -861,7 +861,7 @@ async function exportarPDF(){
   if(doc.autoTable) doc.autoTable({ startY:y+2, head:[['Km','Hora','Alt','T','Sens','Viento','Racha','Dir','Precip','Cielo']],
     body, styles:{fontSize:7,cellPadding:1.2}, headStyles:{fillColor:[41,128,185]}, margin:{left:14,right:14} });
   const fecha=(INPUTS.fecha||'').replaceAll('-','');
-  doc.save('plan_'+(titulo.replace(/[^a-z0-9]+/gi,'_').slice(0,30)||'ruta')+'_'+fecha+'.pdf');
+  doc.save('WESTMETEO_plan_'+(titulo.replace(/[^a-z0-9]+/gi,'_').slice(0,30)||'ruta')+'_'+fecha+'.pdf');
 }
 
 /* ================= ENLACE COMPARTIBLE (PHP en Hostinger) ================= */
