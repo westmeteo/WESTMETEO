@@ -740,6 +740,10 @@ function tempEn(km){
 function dibujarPerfil(){
   const box=$('perfilBox');
   const Wv=Math.min(1040, box.clientWidth||1040), Hv=312;
+  box.innerHTML=perfilSVG(Wv,Hv);
+}
+// construye el SVG del perfil a un tamaño dado (pantalla usa ancho responsive; el PDF pide uno ancho fijo)
+function perfilSVG(Wv,Hv){
   const padL=44,padR=14,padT=16,padB=48;
   const d=PROF.d, z=PROF.z, dmax=d[d.length-1], zmn=Math.min(...z), zmx=Math.max(...z);
   const X=km=>padL+(km/dmax)*(Wv-padL-padR);
@@ -772,7 +776,7 @@ function dibujarPerfil(){
     mk+=`<circle cx="${xx.toFixed(1)}" cy="${yy.toFixed(1)}" r="2.6" fill="#0c1a28" stroke="#fff" stroke-width="1"/>`;
     if(f.temp!=null) mk+=`<text x="${xx.toFixed(1)}" y="${(yy+14).toFixed(1)}" fill="#ffd9d9" font-size="9.5" font-weight="700" text-anchor="middle">${f.temp}°</text>`;
     if(j%2===0) mk+=`<text x="${xx.toFixed(1)}" y="${(yy-8).toFixed(1)}" fill="#cfe0ee" font-size="9" text-anchor="middle">${f.hora}</text>`; });
-  box.innerHTML=`<svg id="perfil" viewBox="0 0 ${Wv} ${Hv}" preserveAspectRatio="xMidYMid meet">
+  return `<svg id="perfil" viewBox="0 0 ${Wv} ${Hv}" preserveAspectRatio="xMidYMid meet">
     <rect x="0" y="0" width="${Wv}" height="${Hv}" fill="#0f1f30"/>
     <path d="${area}" fill="rgba(200,215,228,.10)"/>${ejes}${banda}${seg}${mk}
     <text x="${padL}" y="12" fill="#8fd0ff" font-size="10">Altitud (m)</text>
@@ -807,7 +811,11 @@ function dibujarTabla(){
 /* ================= PDF ================= */
 function svgToPng(svg,scale=2){
   return new Promise((res,rej)=>{
-    const vb=svg.viewBox.baseVal, xml=new XMLSerializer().serializeToString(svg);
+    const vb=svg.viewBox.baseVal;
+    const clone=svg.cloneNode(true);
+    // width/height explícitos: Safari/iOS rasteriza a tamaño intrínseco si faltan y recorta el viewBox
+    clone.setAttribute('width', vb.width); clone.setAttribute('height', vb.height);
+    const xml=new XMLSerializer().serializeToString(clone);
     const img=new Image();
     img.onload=()=>{ const c=document.createElement('canvas'); c.width=vb.width*scale; c.height=vb.height*scale;
       const ctx=c.getContext('2d'); ctx.fillStyle='#0f1f30'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0,c.width,c.height);
@@ -834,7 +842,19 @@ async function exportarPDF(){
   for(const t of [$('mmeta').textContent, $('modelo').textContent]){ const ls=doc.splitTextToSize(t,269); doc.text(ls,14,y); y+=ls.length*5; }
   if(INPUTS.notas){ doc.setTextColor(60); const ls=doc.splitTextToSize('Notas: '+INPUTS.notas,270); doc.text(ls,14,y); y+=ls.length*4+2; }
   const svg=document.querySelector('#perfil');
-  if(svg){ try{ const png=await svgToPng(svg,2); const w=200, h=w*png.h/png.w; doc.addImage(png.data,'PNG',14,y,w,h); y+=h+4; }catch(e){} }
+  if(svg){ try{
+    // perfil ancho fijo para el PDF (independiente del ancho de pantalla, que en móvil sale casi cuadrado)
+    const tmp=document.createElement('div');
+    tmp.style.cssText='position:absolute;left:-99999px;top:0;width:1040px';
+    tmp.innerHTML=perfilSVG(1040,312);
+    document.body.appendChild(tmp);
+    let png; try{ png=await svgToPng(tmp.querySelector('#perfil'),2); } finally{ document.body.removeChild(tmp); }
+    const pageH=doc.internal.pageSize.getHeight();
+    let w=269, h=w*png.h/png.w;                 // 269 mm = ancho útil A4 landscape
+    const maxH=pageH-y-10;                        // no rebasar el borde inferior de la página
+    if(h>maxH){ h=maxH; w=h*png.w/png.h; }
+    doc.addImage(png.data,'PNG',14,y,w,h); y+=h+4;
+  }catch(e){} }
   const body=FILAS.map(f=>{ const km=f.parada?f.km+' P':f.km;
     const hora=f.parada==='llegada'?f.hora+' lleg.':f.parada==='salida'?f.hora+' sal.':f.hora;
     return [km,hora,f.alt,f.temp??'-',f.sens??'-',f.viento??'-',f.racha??'-',dircard(f.dir),f.precip??'-',f.cielo]; });
