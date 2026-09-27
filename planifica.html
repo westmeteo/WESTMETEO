@@ -811,9 +811,17 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
       o.visible = (_pj.z<=1) && !ocluido(g);              // z>1 => detrás de la cámara
     }
   }
+  // flechas de viento: escala ∝ distancia a cámara (referencia fija) → tamaño en pantalla constante con el zoom
+  let windArrows=[], windRef=0;
+  function escalarWind(){
+    if(!windArrows.length) return;
+    if(!windRef){ const d=camera.position.distanceTo(controls.target); if(d>1) windRef=d; else return; }
+    for(const g of windArrows){ const d=camera.position.distanceTo(g.position); g.scale.setScalar(Math.max(0.04,d/windRef)); }
+  }
   let _tf=0;
   (function loop(){requestAnimationFrame(loop);applyZoom();orientarNorte();controls.update();brujula();
     if(townObjs.length && (_tf++%5)===0) actualizarTowns();
+    escalarWind();
     renderer.render(scene,camera);labelR.render(scene,camera);})();
 
   // ---- flechas de viento flotando sobre el track (dir: cola=de dónde viene, punta=hacia dónde sopla) ----
@@ -824,16 +832,18 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
     if(v<45) return 0xff9040; return 0xff3b3b; }
   function limpiarWind(){
     for(const o of windLabels){ if(o.element&&o.element.parentNode) o.element.parentNode.removeChild(o.element); }
-    windLabels.length=0;
+    windLabels.length=0; windArrows.length=0; windRef=0;
     while(windGroup.children.length){ const c=windGroup.children.pop();
       if(c.geometry) c.geometry.dispose(); if(c.material) c.material.dispose(); }
   }
   function setWind(arrows){
     limpiarWind();
-    const base=MAX*0.022;   // flechas grandes (~950 m); crecen con la intensidad sin pasarse del paso de 1,4 km
+    const sz=MAX*0.022*0.30;   // 70% más pequeñas que las actuales
     for(const a of arrows){
-      const v=a.v, len=base*(1+Math.min(v,50)/50*0.45), col=windColor(v);
-      const shaftLen=len*0.62, headLen=len*0.38, rad=len*0.09;
+      const v=a.v, grow=1+Math.min(v,50)/50*0.45, col=windColor(v);
+      const len=sz*2.0*grow;                          // longitud al 200% de ese resultado (≈60% de la actual)
+      const rad=sz*0.09*grow;                          // grosor al tamaño reducido (no lo alarga la longitud)
+      const shaftLen=len*0.62, headLen=len*0.38;
       const mat=new THREE.MeshBasicMaterial({color:col});
       const grp=new THREE.Group();
       const shaft=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad,shaftLen,8),mat);
@@ -844,7 +854,7 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
       const betaTo=(a.dir+180)*Math.PI/180;      // dir=de dónde viene; +180 = hacia dónde sopla
       grp.rotation.y=Math.PI/2-betaTo;           // alinea +X local con el flujo (N=-Z, E=+X)
       grp.position.set(a.wx,a.wy,a.wz);
-      windGroup.add(grp);
+      windGroup.add(grp); windArrows.push(grp);
       const d=document.createElement('div'); d.className='windlab'; d.textContent=Math.round(v);
       const lo=new CSS2DObject(d); lo.position.set(a.wx,a.wy+len*0.28,a.wz);
       windGroup.add(lo); windLabels.push(lo);
