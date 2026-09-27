@@ -90,6 +90,9 @@
  #compass text{font-family:system-ui,sans-serif;font-weight:800;text-anchor:middle;dominant-baseline:central}
  .windlab{font-size:9.5px;font-weight:800;color:#eaf7ff;white-space:nowrap;pointer-events:none;
    text-shadow:0 1px 2px #000,0 0 3px #000;transform:translate(-50%,-140%)}
+ .templab{font-size:10px;font-weight:800;white-space:nowrap;pointer-events:none;
+   text-shadow:0 1px 2px #000,0 0 3px #000;transform:translate(-50%,-50%);
+   padding:0 3px;border-radius:5px;background:rgba(6,16,26,.6)}
  /* pila de cajas flotantes (temperatura + viento) encima de la brújula */
  #hudright{position:absolute;bottom:124px;right:18px;z-index:22;display:flex;flex-direction:column;
    align-items:flex-end;gap:10px;pointer-events:none}
@@ -315,6 +318,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 /* ================= CONSTANTES (portadas de siguiente_plan.py) ================= */
 const EXAG=1.5, MESH=1568, DRAPE=18.0, CADA_KM=1.5, M_ESFUERZO=100.0, RACHA_FACTOR=1.7, TZ='Europe/Madrid';
 const WIND_PASO=1400, WIND_FLOTA=28;   // flechas de viento: una cada ~1,4 km (para que quepan grandes), flotando ~40 m sobre el track
+const TEMP_PASO=1200;                  // etiquetas de temperatura: un número °C cada ~1,2 km sobre el track
 // Regiones con visor 3D (bbox = mismo que los generadores HD). El resto: solo perfil + meteo.
 const REGIONS=[
   {key:'bejar',  nombre:'Sierra de Béjar',  LAT0:40.16,  LAT1:40.48,  LON0:-6.00, LON1:-5.49},
@@ -349,7 +353,7 @@ const WM02_BIAS={ temperature_2m:0, apparent_temperature:0, wind:0, gust:0, prec
 function wm02(v,key){ return (v==null||isNaN(v))?v : v+(WM02_BIAS[key]||0); }
 
 /* ================= ESTADO (se rellena al generar) ================= */
-let CFG, WP, LOCS, PROF, FILAS=[], DATA, NIVELES=false, WINDSAMP=null, ROUTEKM=null;
+let CFG, WP, LOCS, PROF, FILAS=[], DATA, NIVELES=false, WINDSAMP=null, ROUTEKM=null, TEMPSAMP=null;
 let RAWGPX='', INPUTS=null, VIS=null;
 
 /* ================= UTILIDADES GEO / GPX / DEM / RITMO ================= */
@@ -515,7 +519,7 @@ async function generar(gpxText, inputs){
 
     // --- marcadores 3D + línea (solo si hay visor) ---
     let BASE=null, P=null, ROUTE=null, MARK=null, TOWNS=null;
-    WINDSAMP=null; ROUTEKM=null;
+    WINDSAMP=null; ROUTEKM=null; TEMPSAMP=null;
     if(region){
       P={zmin:meta.zmin, zmax:meta.zmax, exag:EXAG};
       const meshZ=new Float32Array(meta.n*meta.n);           // BASE.z = flipud(dem)
@@ -558,6 +562,16 @@ async function generar(gpxText, inputs){
           const m=mundo(lat[i],lon[i],DRAPE+WIND_FLOTA*EXAG);
           WINDSAMP.push({wx:+m[0].toFixed(1), wy:+m[1].toFixed(1), wz:+m[2].toFixed(1),
             li, alt:Math.round(ele[i]), elapsed_s:Math.round(el)});
+          if(i===n-1) break;
+        }
+      }
+      // muestras de temperatura cada ~1,2 km: posición mundo (flotando sobre el track) + km para consultar la temperatura
+      TEMPSAMP=[]; let _tnext=0;
+      for(let i=0;i<n;i++){
+        if(distM[i]>=_tnext || i===n-1){
+          _tnext=distM[i]+TEMP_PASO;
+          const m=mundo(lat[i],lon[i],DRAPE+22);
+          TEMPSAMP.push({tx:+m[0].toFixed(1), ty:+m[1].toFixed(1), tz:+m[2].toFixed(1), km:+distKm[i].toFixed(3)});
           if(i===n-1) break;
         }
       }
@@ -845,8 +859,15 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
       const box=$('windbox'); if(box){ box.classList.toggle('open',windVisible); box.classList.toggle('off',!windVisible); }
     }); } }
 
-  // ---- temperatura del track: recolorea la propia línea de ruta (frío→cálido) ----
+  // ---- temperatura del track: recolorea la línea de ruta + etiquetas °C cada ~1,2 km ----
   let tempVisible=true, tempReady=false, pendingTempCols=null, tempCols=null;
+  const tempLabelGroup=new THREE.Group(); scene.add(tempLabelGroup);
+  const tempLabels=[];
+  function limpiarTempLabels(){
+    for(const o of tempLabels){ if(o.element&&o.element.parentNode) o.element.parentNode.removeChild(o.element); }
+    tempLabels.length=0;
+    while(tempLabelGroup.children.length) tempLabelGroup.children.pop();
+  }
   function aplicarTemp(cols){
     if(!rline||!rgeom){ pendingTempCols=cols; return; }   // la línea aún no existe (textura cargando)
     if(tempVisible && cols && cols.length){
@@ -858,9 +879,21 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
       lineMat.vertexColors=false; lineMat.color.set(0xff2b2b); lineMat.needsUpdate=true;   // vuelve al rojo
     }
   }
-  function setTemp(cols,lo,hi){
+  function pintarTempLabels(labs){
+    limpiarTempLabels();
+    for(const p of (labs||[])){
+      if(p.t==null||isNaN(p.t)) continue;
+      const d=document.createElement('div'); d.className='templab';
+      d.textContent=Math.round(p.t)+'°'; d.style.color=tempColor(p.t);
+      const o=new CSS2DObject(d); o.position.set(p.x,p.y,p.z);
+      tempLabelGroup.add(o); tempLabels.push(o);
+    }
+    tempLabelGroup.visible=tempVisible; for(const o of tempLabels) o.visible=tempVisible;
+  }
+  function setTemp(cols,lo,hi,labs){
     tempCols=cols; tempReady=!!(cols&&cols.length);
     aplicarTemp(cols);
+    pintarTempLabels(labs);
     const box=$('tempbox');
     if(box){ box.style.display=tempReady?'flex':'none';
       box.classList.toggle('open',tempVisible); box.classList.toggle('off',!tempVisible);
@@ -871,6 +904,7 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
   }
   { const sw=$('tempsw'); if(sw){ tempVisible=sw.checked; sw.addEventListener('change',()=>{
       tempVisible=sw.checked; aplicarTemp(tempCols);
+      tempLabelGroup.visible=tempVisible; for(const o of tempLabels) o.visible=tempVisible;
       const box=$('tempbox'); if(box){ box.classList.toggle('open',tempVisible); box.classList.toggle('off',!tempVisible); }
     }); } }
 
@@ -991,7 +1025,8 @@ function render(data,niveles){
     const tvals=FILAS.map(f=>f.temp).filter(v=>v!=null);
     const tlo=Math.min(0,...tvals), thi=Math.max(20,...tvals);
     const cols=ROUTEKM.map(km=>tempColor(tempEn(km)));
-    VIS.setTemp(cols,tlo,thi);
+    const labs=(TEMPSAMP||[]).map(s=>({x:s.tx,y:s.ty,z:s.tz,t:tempEn(s.km)}));
+    VIS.setTemp(cols,tlo,thi,labs);
   }
   $('fuente').textContent='Previsión: Open-Meteo · corrección WM0.2 de @westmeteo · Viento a la cota real y racha = viento × '+CFG.racha_factor+' · @westmeteo';
 }
