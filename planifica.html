@@ -53,7 +53,7 @@
  body.viewer #app{display:block}
  /* capa de controles flotantes: fija a la altura VISIBLE (100dvh) para que peguen al borde inferior real en móvil; deja pasar el toque al visor */
  #hud{position:fixed;top:0;left:0;right:0;bottom:0;height:100dvh;z-index:20;pointer-events:none}
- #hud #compass,#hud #windbox{pointer-events:auto}
+ #hud #compass,#hud .hbox{pointer-events:auto}
  #ohead{position:fixed;top:0;left:0;right:0;z-index:42;background:#1f3346;border-bottom:1px solid #33506b}
  .obanner{display:block;text-decoration:none;color:inherit;cursor:pointer}
  .obanner .bimg{height:92px;background:#20374f url('banner.jpg') center/contain no-repeat}
@@ -90,13 +90,17 @@
  #compass text{font-family:system-ui,sans-serif;font-weight:800;text-anchor:middle;dominant-baseline:central}
  .windlab{font-size:9.5px;font-weight:800;color:#eaf7ff;white-space:nowrap;pointer-events:none;
    text-shadow:0 1px 2px #000,0 0 3px #000;transform:translate(-50%,-140%)}
- #windbox{position:absolute;bottom:120px;right:18px;z-index:22;display:none;flex-direction:column;pointer-events:auto;
+ /* pila de cajas flotantes (temperatura + viento) encima de la brújula */
+ #hudright{position:absolute;bottom:124px;right:18px;z-index:22;display:flex;flex-direction:column;
+   align-items:flex-end;gap:10px;pointer-events:none}
+ .hbox{display:none;flex-direction:column;pointer-events:auto;
    background:rgba(12,26,40,.62);backdrop-filter:blur(6px);color:#dfeaf3;border:1px solid #8fd0ff;
    border-radius:12px;padding:8px 11px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.4))}
- #windbox .wb-head{display:flex;align-items:center;gap:8px}
- #windbox .wb-icon{color:#8fe08f;font-size:13px;transform:rotate(-20deg);display:inline-block}
- #windbox .wb-title{font-weight:800;font-size:13px;color:#eaf2f8;margin-right:auto}
- #windbox.off{border-color:#5a7590}
+ .hbox .wb-head{display:flex;align-items:center;gap:8px}
+ .hbox .wb-icon{font-size:13px;display:inline-block}
+ #windbox .wb-icon{color:#8fe08f;transform:rotate(-20deg)}
+ .hbox .wb-title{font-weight:800;font-size:13px;color:#eaf2f8;margin-right:auto}
+ .hbox.off{border-color:#5a7590}
  #windbox.off .wb-icon{color:#7f97a9}
  .wb-switch{position:relative;display:inline-block;width:38px;height:20px;flex:0 0 auto;cursor:pointer}
  .wb-switch input{opacity:0;width:0;height:0;position:absolute}
@@ -104,12 +108,15 @@
  .wb-slider::before{content:"";position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
  .wb-switch input:checked + .wb-slider{background:#3a80c4}
  .wb-switch input:checked + .wb-slider::before{transform:translateX(18px)}
- #windbox .wb-body{display:none;flex-direction:column;gap:2px;font-size:11px;line-height:1.5;margin-top:7px}
- #windbox.open .wb-body{display:flex}
- #windbox .wb-body .wb-h{color:#8fd0ff;font-weight:700;margin-bottom:1px}
- #windbox .wb-body span{display:flex;align-items:center;gap:6px}
- #windbox .wb-body i{width:14px;height:8px;border-radius:2px;display:inline-block}
- #windbox .wb-body em{color:#9fb6c8;font-size:10px;margin-top:2px}
+ .hbox .wb-body{display:none;flex-direction:column;gap:2px;font-size:11px;line-height:1.5;margin-top:7px}
+ .hbox.open .wb-body{display:flex}
+ .hbox .wb-body .wb-h{color:#8fd0ff;font-weight:700;margin-bottom:1px}
+ .hbox .wb-body span{display:flex;align-items:center;gap:6px}
+ .hbox .wb-body i{width:14px;height:8px;border-radius:2px;display:inline-block}
+ .hbox .wb-body em{color:#9fb6c8;font-size:10px;margin-top:2px}
+ #tempbox .tgrad{width:140px;height:11px;border-radius:3px;margin:1px 0;
+   background:linear-gradient(to right,hsl(220,75%,50%),hsl(165,75%,50%),hsl(110,75%,50%),hsl(55,75%,50%),hsl(0,75%,50%))}
+ #tempbox .tscale{display:flex;justify-content:space-between;font-size:10px;color:#cfe0ee;font-weight:700}
  #meteo{position:fixed;inset:52px 0 0 0;z-index:35;display:none;overflow:auto;background:#0f1f30;color:#eaf2f8}
  #meteo.visible{display:block}
  #meteo .wrap{max-width:1080px;margin:0 auto;padding:16px 16px 60px}
@@ -237,7 +244,24 @@
     <text id="cS" x="0" y="34" font-size="11" fill="#eaf2f8">S</text>
     <text id="cW" x="-34" y="0" font-size="11" fill="#eaf2f8">O</text>
   </svg>
-  <div id="windbox">
+  <div id="hudright">
+  <div id="tempbox" class="hbox">
+    <div class="wb-head">
+      <span class="wb-icon">🌡️</span>
+      <span class="wb-title">Temperatura</span>
+      <label class="wb-switch" title="Colorear el track por temperatura">
+        <input type="checkbox" id="tempsw" checked>
+        <span class="wb-slider"></span>
+      </label>
+    </div>
+    <div class="wb-body">
+      <div class="wb-h">°C en el track</div>
+      <div class="tgrad"></div>
+      <div class="tscale"><span id="tmin">–</span><span id="tmax">–</span></div>
+      <em>al pasar por cada punto (frío → cálido)</em>
+    </div>
+  </div>
+  <div id="windbox" class="hbox">
     <div class="wb-head">
       <span class="wb-icon">➤</span>
       <span class="wb-title">Viento</span>
@@ -255,6 +279,7 @@
       <span><i style="background:#ff3b3b"></i>&gt;45</span>
       <em>flecha: hacia dónde sopla</em>
     </div>
+  </div>
   </div>
   </div>
   <div id="meteo"><div class="wrap">
@@ -324,7 +349,7 @@ const WM02_BIAS={ temperature_2m:0, apparent_temperature:0, wind:0, gust:0, prec
 function wm02(v,key){ return (v==null||isNaN(v))?v : v+(WM02_BIAS[key]||0); }
 
 /* ================= ESTADO (se rellena al generar) ================= */
-let CFG, WP, LOCS, PROF, FILAS=[], DATA, NIVELES=false, WINDSAMP=null;
+let CFG, WP, LOCS, PROF, FILAS=[], DATA, NIVELES=false, WINDSAMP=null, ROUTEKM=null;
 let RAWGPX='', INPUTS=null, VIS=null;
 
 /* ================= UTILIDADES GEO / GPX / DEM / RITMO ================= */
@@ -490,7 +515,7 @@ async function generar(gpxText, inputs){
 
     // --- marcadores 3D + línea (solo si hay visor) ---
     let BASE=null, P=null, ROUTE=null, MARK=null, TOWNS=null;
-    WINDSAMP=null;
+    WINDSAMP=null; ROUTEKM=null;
     if(region){
       P={zmin:meta.zmin, zmax:meta.zmax, exag:EXAG};
       const meshZ=new Float32Array(meta.n*meta.n);           // BASE.z = flipud(dem)
@@ -502,9 +527,9 @@ async function generar(gpxText, inputs){
         const y=(demSample(dem,meta.n,region,la,lo)-meta.zmin)*EXAG+off;
         return [x,y,zc];
       };
-      const step=Math.max(1,Math.floor(n/700)); ROUTE=[];
-      for(let i=0;i<n;i+=step){ const m=mundo(lat[i],lon[i],DRAPE); ROUTE.push(+m[0].toFixed(1),+m[1].toFixed(1),+m[2].toFixed(1)); }
-      { const m=mundo(lat[n-1],lon[n-1],DRAPE); ROUTE.push(+m[0].toFixed(1),+m[1].toFixed(1),+m[2].toFixed(1)); }
+      const step=Math.max(1,Math.floor(n/700)); ROUTE=[]; ROUTEKM=[];
+      for(let i=0;i<n;i+=step){ const m=mundo(lat[i],lon[i],DRAPE); ROUTE.push(+m[0].toFixed(1),+m[1].toFixed(1),+m[2].toFixed(1)); ROUTEKM.push(+distKm[i].toFixed(3)); }
+      { const m=mundo(lat[n-1],lon[n-1],DRAPE); ROUTE.push(+m[0].toFixed(1),+m[1].toFixed(1),+m[2].toFixed(1)); ROUTEKM.push(+distKm[n-1].toFixed(3)); }
       let imax=0; for(let i=1;i<n;i++) if(ele[i]>ele[imax]) imax=i;
       const ms=mundo(lat[0],lon[0],DRAPE+40), me=mundo(lat[n-1],lon[n-1],DRAPE+72), mh=mundo(lat[imax],lon[imax],DRAPE+40);
       MARK=[
@@ -684,6 +709,7 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
 
   const lineMat=new LineMaterial({color:0xff2b2b, linewidth:4.2, worldUnits:false, transparent:true, depthTest:true, dashed:false});
   lineMat.resolution.set(innerWidth,innerHeight);
+  let rline=null, rgeom=null;   // referencia a la línea de ruta (para recolorearla por temperatura)
 
   (async()=>{
     const tex=await new THREE.TextureLoader().loadAsync(texURL);
@@ -696,7 +722,8 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
     mesh.rotation.x=-Math.PI/2; mesh.receiveShadow=true; mesh.castShadow=true; scene.add(mesh);
 
     const lg=new LineGeometry(); lg.setPositions(ROUTE);
-    const rline=new Line2(lg,lineMat); rline.computeLineDistances(); scene.add(rline);
+    rline=new Line2(lg,lineMat); rline.computeLineDistances(); scene.add(rline); rgeom=lg;
+    if(pendingTempCols){ aplicarTemp(pendingTempCols); pendingTempCols=null; }
     const lgb=new LineGeometry(); lgb.setPositions(ROUTE);
     const matB=new LineMaterial({color:0x5c0000,linewidth:7.5,worldUnits:false,transparent:true,opacity:.55,depthTest:true});
     matB.resolution.set(innerWidth,innerHeight);
@@ -818,6 +845,35 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
       const box=$('windbox'); if(box){ box.classList.toggle('open',windVisible); box.classList.toggle('off',!windVisible); }
     }); } }
 
+  // ---- temperatura del track: recolorea la propia línea de ruta (frío→cálido) ----
+  let tempVisible=true, tempReady=false, pendingTempCols=null, tempCols=null;
+  function aplicarTemp(cols){
+    if(!rline||!rgeom){ pendingTempCols=cols; return; }   // la línea aún no existe (textura cargando)
+    if(tempVisible && cols && cols.length){
+      const flat=new Float32Array(cols.length*3);
+      for(let i=0;i<cols.length;i++){ const c=new THREE.Color(cols[i]); flat[i*3]=c.r; flat[i*3+1]=c.g; flat[i*3+2]=c.b; }
+      rgeom.setColors(flat);
+      lineMat.vertexColors=true; lineMat.color.set(0xffffff); lineMat.needsUpdate=true;
+    }else{
+      lineMat.vertexColors=false; lineMat.color.set(0xff2b2b); lineMat.needsUpdate=true;   // vuelve al rojo
+    }
+  }
+  function setTemp(cols,lo,hi){
+    tempCols=cols; tempReady=!!(cols&&cols.length);
+    aplicarTemp(cols);
+    const box=$('tempbox');
+    if(box){ box.style.display=tempReady?'flex':'none';
+      box.classList.toggle('open',tempVisible); box.classList.toggle('off',!tempVisible);
+      const mn=$('tmin'), mx=$('tmax');
+      if(mn&&lo!=null) mn.textContent=Math.round(lo)+'°';
+      if(mx&&hi!=null) mx.textContent=Math.round(hi)+'°';
+    }
+  }
+  { const sw=$('tempsw'); if(sw){ tempVisible=sw.checked; sw.addEventListener('change',()=>{
+      tempVisible=sw.checked; aplicarTemp(tempCols);
+      const box=$('tempbox'); if(box){ box.classList.toggle('open',tempVisible); box.classList.toggle('off',!tempVisible); }
+    }); } }
+
   function setVista(v){
     renderer.domElement.style.display=v?'block':'none';
     labelR.domElement.style.display=v?'block':'none';
@@ -825,8 +881,10 @@ function initVisor(BASE,P,ROUTE,MARK,texURL,TOWNS){
     $('info').style.display=v?'block':'none';
     const box=$('windbox');
     if(box) box.style.display=(v&&windGroup.children.length)?'flex':'none';
+    const tb=$('tempbox');
+    if(tb) tb.style.display=(v&&tempReady)?'flex':'none';
   }
-  return {renderer,labelR,setVista,setWind};
+  return {renderer,labelR,setVista,setWind,setTemp};
 }
 
 /* ================= PREVISION (Open-Meteo) · portado de siguiente_plan.py ================= */
@@ -927,6 +985,13 @@ function render(data,niveles){
       return {wx:s.wx,wy:s.wy,wz:s.wz,v:nn(v),dir:dr};
     }).filter(a=>a.v!=null && !isNaN(a.dir));
     VIS.setWind(arrows);
+  }
+  // temperatura del track sobre el visor 3D (recolorea la línea de ruta, mismos colores que el perfil)
+  if(VIS && VIS.setTemp && ROUTEKM && ROUTEKM.length){
+    const tvals=FILAS.map(f=>f.temp).filter(v=>v!=null);
+    const tlo=Math.min(0,...tvals), thi=Math.max(20,...tvals);
+    const cols=ROUTEKM.map(km=>tempColor(tempEn(km)));
+    VIS.setTemp(cols,tlo,thi);
   }
   $('fuente').textContent='Previsión: Open-Meteo · corrección WM0.2 de @westmeteo · Viento a la cota real y racha = viento × '+CFG.racha_factor+' · @westmeteo';
 }
