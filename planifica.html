@@ -32,6 +32,9 @@
    cursor:pointer;background:#22384c;transition:.15s}
  #drop.hover{border-color:#8fd0ff;background:#2a4560}
  #drop b{color:#fff} #drop .gpxname{display:block;margin-top:8px;color:#78dcaa;font-weight:700;font-size:13px}
+ /* en escritorio: "Arrastra…"; en pantalla táctil (móvil/tablet): solo "Sube…" */
+ #drop .d-mobile{display:none}
+ @media (hover:none) and (pointer:coarse){ #drop .d-desktop{display:none} #drop .d-mobile{display:inline} }
  .paradas .parada{display:flex;gap:8px;align-items:end;margin:6px 0}
  .paradas .parada>div{flex:1}
  .btn{font:700 14px system-ui,sans-serif;border:none;border-radius:10px;padding:11px 18px;cursor:pointer}
@@ -171,10 +174,11 @@
   <div class="card">
     <h3>1 · Tu track</h3>
     <div id="drop">
-      <b>Arrastra aquí tu archivo .gpx</b><br>o pulsa para elegirlo
+      <b><span class="d-desktop">Arrastra aquí tu archivo .gpx o .kml</span><span class="d-mobile">Sube tu archivo .gpx o .kml</span></b><br>
+      <span class="d-desktop">o pulsa para elegirlo</span><span class="d-mobile">pulsa para elegirlo</span>
       <span class="gpxname" id="gpxname"></span>
     </div>
-    <input type="file" id="file" accept=".gpx,application/gpx+xml,text/xml" style="display:none">
+    <input type="file" id="file" accept=".gpx,.kml,application/gpx+xml,application/vnd.google-earth.kml+xml,text/xml,application/xml" style="display:none">
     <label style="margin-top:12px">Título de la ruta (opcional)</label>
     <input type="text" id="titulo" placeholder="Mi ruta">
     <label>Notas (opcional)</label>
@@ -363,10 +367,17 @@ function haversine_m(la1,lo1,la2,lo2){
   const a=Math.sin(dphi/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
   return 2*R*Math.asin(Math.sqrt(a));
 }
-function parseGPX(text){
+function parseTrack(text){
   const doc=new DOMParser().parseFromString(text,'application/xml');
-  if(doc.querySelector('parsererror')) throw new Error('GPX no válido');
-  const pts=[...doc.getElementsByTagName('*')].filter(e=>{const t=e.localName;return t==='trkpt'||t==='rtept';});
+  if(doc.querySelector('parsererror')) throw new Error('Archivo no válido (XML mal formado)');
+  const all=[...doc.getElementsByTagName('*')];
+  const gpxPts=all.filter(e=>e.localName==='trkpt'||e.localName==='rtept');   // GPX
+  if(gpxPts.length) return parseGPXPts(gpxPts);
+  const kml=parseKML(all);                                                    // KML / KMZ descomprimido
+  if(kml) return kml;
+  throw new Error('No se reconocen puntos de track (ni GPX ni KML)');
+}
+function parseGPXPts(pts){
   const lat=[],lon=[],ele=[];
   for(const p of pts){
     const la=parseFloat(p.getAttribute('lat')), lo=parseFloat(p.getAttribute('lon'));
@@ -375,8 +386,46 @@ function parseGPX(text){
     for(const c of p.children){ if(c.localName==='ele'){ e=parseFloat(c.textContent); } }
     lat.push(la); lon.push(lo); ele.push(isNaN(e)?null:e);
   }
-  if(lat.length<2) throw new Error('El GPX no tiene puntos de track');
+  if(lat.length<2) throw new Error('El archivo no tiene puntos de track');
   return {lat,lon,ele};
+}
+function parseCoordBlock(text){ // KML <coordinates>: "lon,lat,ele  lon,lat,ele …" (coma dentro, espacio entre)
+  const seq=[];
+  const norm=String(text).replace(/\s*,\s*/g,',');   // tolera "lon, lat, ele" → "lon,lat,ele"
+  for(const tok of norm.trim().split(/\s+/)){
+    if(!tok) continue;
+    const a=tok.split(','), lo=parseFloat(a[0]), la=parseFloat(a[1]), el=parseFloat(a[2]);
+    if(!isNaN(la)&&!isNaN(lo)) seq.push([la,lo,isNaN(el)?null:el]);
+  }
+  return seq;
+}
+function parseKML(all){
+  let seq=[];
+  // 1) <gx:Track> → <gx:coord>lon lat ele</gx:coord> (separado por espacios)
+  for(const trk of all.filter(e=>e.localName==='Track')){
+    for(const c of trk.children){
+      if(c.localName!=='coord') continue;
+      const a=c.textContent.trim().split(/\s+/), lo=parseFloat(a[0]), la=parseFloat(a[1]), el=parseFloat(a[2]);
+      if(!isNaN(la)&&!isNaN(lo)) seq.push([la,lo,isNaN(el)?null:el]);
+    }
+  }
+  // 2) <LineString> → concatena sus <coordinates> en orden de documento (soporta multi-tramo)
+  if(!seq.length){
+    for(const ls of all.filter(e=>e.localName==='LineString')){
+      const co=[...ls.children].find(c=>c.localName==='coordinates');
+      if(co) seq.push(...parseCoordBlock(co.textContent));
+    }
+  }
+  // 3) reserva: el bloque <coordinates> más largo (KML sin LineString explícito)
+  if(!seq.length){
+    let best=[];
+    for(const co of all.filter(e=>e.localName==='coordinates')){
+      const s=parseCoordBlock(co.textContent); if(s.length>best.length) best=s;
+    }
+    seq=best;
+  }
+  if(seq.length<2) return null;
+  return {lat:seq.map(p=>p[0]), lon:seq.map(p=>p[1]), ele:seq.map(p=>p[2])};
 }
 function interpNaN(arr){ // rellena huecos null por interpolación lineal sobre el índice
   const n=arr.length, ok=[]; for(let i=0;i<n;i++) if(arr[i]!=null&&!isNaN(arr[i])) ok.push(i);
@@ -432,14 +481,14 @@ async function generar(gpxText, inputs){
   try{
     const setupErr=$('setupError'); setupErr.textContent='';
     if(!gpxText){
-      if(!RAWGPX){ setupErr.textContent='Elige primero un archivo .gpx.'; return; }
+      if(!RAWGPX){ setupErr.textContent='Elige primero un archivo .gpx o .kml.'; return; }
       gpxText=RAWGPX; inputs=leerInputs();
     }
     RAWGPX=gpxText; INPUTS=inputs;
     showLoad('Procesando el track…');
 
-    // --- GPX + distancias ---
-    const g=parseGPX(gpxText);
+    // --- track (GPX o KML) + distancias ---
+    const g=parseTrack(gpxText);
     const lat=g.lat, lon=g.lon, n=lat.length;
     const distM=new Array(n).fill(0);
     for(let i=1;i<n;i++) distM[i]=distM[i-1]+haversine_m(lat[i-1],lon[i-1],lat[i],lon[i]);
@@ -1245,8 +1294,9 @@ function initForm(){
   $('generar').onclick=()=>generar();
 }
 function leerFichero(f){
+  if(/\.kmz$/i.test(f.name)){ $('setupError').textContent='El KMZ va comprimido; expórtalo como KML o GPX y vuelve a subirlo.'; return; }
   const fr=new FileReader();
-  fr.onload=()=>{ RAWGPX=fr.result; $('gpxname').textContent=f.name; if(!$('titulo').value) $('titulo').value=f.name.replace(/\.gpx$/i,''); };
+  fr.onload=()=>{ RAWGPX=fr.result; $('gpxname').textContent=f.name; if(!$('titulo').value) $('titulo').value=f.name.replace(/\.(gpx|kml)$/i,''); };
   fr.onerror=()=>{ $('setupError').textContent='No se pudo leer el archivo.'; };
   fr.readAsText(f);
 }
