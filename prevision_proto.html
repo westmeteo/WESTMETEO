@@ -278,7 +278,8 @@ function drawChart(cid, s, endIdx, fromStart){
   for(let j=0;j<nH;j++){ const g=G(j), d=D.time[g], hr=d.getHours(), dk=d.getDate()+'-'+d.getMonth();
     if(dk!==dAnt){ dAnt=dk; svg.appendChild(el('line',{x1:X(j),y1:42,x2:X(j),y2:plotB,stroke:'#49708f','stroke-width':1.2}));
     }else svg.appendChild(el('line',{x1:X(j),y1:plotT,x2:X(j),y2:plotB,stroke:'#22384c','stroke-width':1}));
-    svg.appendChild(el('text',{x:XC(j),y:52,fill:'#9ab2c8','font-size':9,'text-anchor':'middle'},String(hr).padStart(2,'0')+'h'));
+    svg.appendChild(el('text',{x:XC(j),y:52,fill:'#9ab2c8','font-size':9,'text-anchor':'middle'},
+      GEN?(String(hr).padStart(2,'0')+'-'+String(hr+6).padStart(2,'0')+'h'):(String(hr).padStart(2,'0')+'h')));
   }
   svg.appendChild(el('line',{x1:PADL,y1:plotB,x2:gw1,y2:plotB,stroke:'#49708f','stroke-width':1}));
 
