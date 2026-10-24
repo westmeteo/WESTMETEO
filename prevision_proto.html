@@ -348,7 +348,7 @@ function drawChart(cid, s, endIdx, fromStart){
       const sec=document.createElement('div'); sec.className='daysec'; sec.style.width=(cnt*SW)+'px';
       const lbl=document.createElement('div'); lbl.className='daylbl';
       lbl.innerHTML=`${DIAS[d.getDay()]} ${d.getDate()} ${capMes(d.getMonth())} `+
-        `<span style="color:#7fc0ff;font-size:12px;font-weight:700">(${tot.toFixed(1)}mm)</span>`+
+        `<span style="color:#7fc0ff;font-size:12px;font-weight:700">(💧 ${tot.toFixed(1)}mm)</span>`+
         (isFinite(tmn)?`<span style="color:#8fd0ff;font-size:14px;margin-left:13px">mín ${Math.round(tmn)}°</span>`+
                        `<span style="color:#ff6b6b;font-size:14px;margin-left:7px">máx ${Math.round(tmx)}°</span>`:'');
       sec.appendChild(lbl); dayrow.appendChild(sec); jj+=cnt; } }
