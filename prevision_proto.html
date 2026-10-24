@@ -67,7 +67,7 @@
   <b data-k="racha"><span class="sw" style="background:repeating-linear-gradient(90deg,var(--racha) 0 3px,transparent 3px 6px)"></span>Racha</b>
   <b data-k="nubes"><span class="sw sq" style="background:linear-gradient(90deg,#d8dee4,#4a535c)"></span>Nubes</b>
 </div>
-<div class="modes"><button id="mDet" class="mode on">Previsión detallada</button><button id="mGen" class="mode">Previsión general</button></div>
+<div class="modes"><button id="mGen" class="mode on">Previsión general</button><button id="mDet" class="mode">Previsión detallada</button></div>
 <div id="charts"></div>
 <div class="hint">Cada bloque = 7 días; el siguiente empieza un día después · desliza con el dedo ← → · toca una hora</div>
 <div id="tip"></div>
@@ -101,8 +101,9 @@ const plotT=TOP, plotB=Hsvg-BOT, plotH=plotB-plotT;
 const sel=document.getElementById('sel'), tip=document.getElementById('tip');
 LUGARES.forEach(l=>{const o=document.createElement('option');o.value=l.id;o.textContent=l.n;sel.appendChild(o);});
 let DATA=null;
-const VISI={nubes:true,temp:true,sens:false,lluvia:true,viento:true,racha:false};
-let MODE='det', DATAGEN=null;
+const VIS_DET={nubes:true,temp:true,sens:false,lluvia:true,viento:true,racha:false};   // detallada: todo menos sensación y racha
+const VIS_GEN={nubes:true,temp:true,sens:false,lluvia:true,viento:false,racha:false};  // general: temperatura, lluvia y nubes
+let MODE='gen', VISI=VIS_GEN, DATAGEN=null;
 function DS(){ return (MODE==='gen'&&DATAGEN)?DATAGEN:DATA; }
 function buildGen(){   // agrega cada 6 h (4 bloques/día): medias (y suma de lluvia)
   const n=DATA.time.length, B=6, m=Math.ceil(n/B);
@@ -405,12 +406,13 @@ document.addEventListener('click', e=>{ if(!e.target.closest('.mg-wrap') && !e.t
 tip.addEventListener('click', e=>{ if(e.target.closest('.tipx')) tip.style.display='none'; });
 
 sel.addEventListener('change', cargar);
-{ const mDet=document.getElementById('mDet'), mGen=document.getElementById('mGen');
-  const setMode=m=>{ MODE=m; mDet.classList.toggle('on',m==='det'); mGen.classList.toggle('on',m==='gen'); if(DATA) pintarTodo(); };
-  mDet.addEventListener('click',()=>setMode('det')); mGen.addEventListener('click',()=>setMode('gen')); }
-document.querySelectorAll('.leg b[data-k]').forEach(b=>{ const k=b.dataset.k;
-  b.classList.toggle('off', !VISI[k]);
-  b.addEventListener('click',()=>{ VISI[k]=!VISI[k]; b.classList.toggle('off',!VISI[k]); if(DATA) pintarTodo(); }); });
+{ const mGen=document.getElementById('mGen'), mDet=document.getElementById('mDet');
+  const setMode=m=>{ MODE=m; VISI=(m==='gen')?VIS_GEN:VIS_DET; mGen.classList.toggle('on',m==='gen'); mDet.classList.toggle('on',m==='det'); syncLeg(); if(DATA) pintarTodo(); };
+  mGen.addEventListener('click',()=>setMode('gen')); mDet.addEventListener('click',()=>setMode('det')); }
+const legBtns=[...document.querySelectorAll('.leg b[data-k]')];
+function syncLeg(){ legBtns.forEach(b=>b.classList.toggle('off', !VISI[b.dataset.k])); }
+legBtns.forEach(b=>{ const k=b.dataset.k; b.addEventListener('click',()=>{ VISI[k]=!VISI[k]; b.classList.toggle('off',!VISI[k]); if(DATA) pintarTodo(); }); });
+syncLeg();
 document.getElementById('foot').innerHTML =
   'Prototipo de nueva Previsión (meteograma apilado). Solo los 7 primeros días: el primer bloque es la semana completa y cada bloque de abajo empieza un día después (el último, solo 24 h). '+
   '<b>AROME</b> mientras cubre (primeras ~48 h), luego <b>ECMWF</b>. Lluvia con corrección <b>WM1.0</b> (realce solo con flujo del <b>S/SO/O</b>). '+
