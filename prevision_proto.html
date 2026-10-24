@@ -6,7 +6,7 @@
 <title>Previsión (prototipo meteograma) · @westmeteo</title>
 <style>
   :root{ --bg:#0f1f30; --panel:#16293d; --line:#33506b; --ink:#eaf2f8; --ink2:#cfe0ee; --mut:#7f9bb3;
-         --azul:#8fd0ff; --temp:#ff9d5c; --viento:#a8d96a; --racha:#4e9a52; --lluvia:#4aa3ff; }
+         --azul:#8fd0ff; --temp:#ff9d5c; --sens:#ffe14d; --viento:#a8d96a; --racha:#4e9a52; --lluvia:#4aa3ff; }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,sans-serif;-webkit-text-size-adjust:100%}
   header{padding:12px 14px 6px}
@@ -16,7 +16,8 @@
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:0 14px 8px}
   select{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit}
   .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink2);padding:0 14px 8px}
-  .leg b{display:inline-flex;align-items:center;gap:5px;font-weight:600}
+  .leg b{display:inline-flex;align-items:center;gap:5px;font-weight:600;cursor:pointer;user-select:none;transition:opacity .15s}
+  .leg b.off{opacity:.35}
   .sw{width:16px;height:4px;border-radius:2px;display:inline-block}
   .sw.sq{height:11px;width:11px;border-radius:2px}
   #charts .mg-box{margin-top:16px}
@@ -49,11 +50,12 @@
   <select id="sel"></select>
 </div>
 <div class="leg">
-  <b><span class="sw" style="background:var(--temp)"></span>Temperatura (°C)</b>
-  <b><span class="sw" style="background:var(--viento)"></span>Viento (km/h)</b>
-  <b><span class="sw" style="background:repeating-linear-gradient(90deg,var(--racha) 0 3px,transparent 3px 6px)"></span>Racha</b>
-  <b><span class="sw sq" style="background:var(--lluvia);opacity:.6"></span>Lluvia (mm/h)</b>
-  <b><span class="sw sq" style="background:linear-gradient(90deg,#d8dee4,#4a535c)"></span>Nubes por altitud (claro→oscuro = %)</b>
+  <b data-k="temp"><span class="sw" style="background:var(--temp)"></span>Temperatura</b>
+  <b data-k="sens"><span class="sw" style="background:var(--sens)"></span>Sensación</b>
+  <b data-k="lluvia"><span class="sw sq" style="background:var(--lluvia);opacity:.6"></span>Lluvia</b>
+  <b data-k="viento"><span class="sw" style="background:var(--viento)"></span>Viento</b>
+  <b data-k="racha"><span class="sw" style="background:repeating-linear-gradient(90deg,var(--racha) 0 3px,transparent 3px 6px)"></span>Racha</b>
+  <b data-k="nubes"><span class="sw sq" style="background:linear-gradient(90deg,#d8dee4,#4a535c)"></span>Nubes</b>
 </div>
 <div id="charts"></div>
 <div class="hint">Cada bloque = 7 días; el siguiente empieza un día después · desliza con el dedo ← → · toca una hora</div>
@@ -88,6 +90,7 @@ const plotT=TOP, plotB=Hsvg-BOT, plotH=plotB-plotT;
 const sel=document.getElementById('sel'), tip=document.getElementById('tip');
 LUGARES.forEach(l=>{const o=document.createElement('option');o.value=l.id;o.textContent=l.n;sel.appendChild(o);});
 let DATA=null;
+const VISI={nubes:true,temp:true,sens:false,lluvia:true,viento:true,racha:false};
 
 function ns(t){return document.createElementNS('http://www.w3.org/2000/svg',t);}
 function el(t,a,txt){const e=ns(t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;}
@@ -97,7 +100,7 @@ function tks(min,max,n){ const span=(max-min)||1; let step=Math.pow(10,Math.floo
 async function cargar(){
   const l=LUGARES.find(x=>x.id===sel.value)||LUGARES[0];
   document.getElementById('fuente').textContent='Cargando AROME + ECMWF…';
-  const vars='temperature_2m,precipitation,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,'+
+  const vars='temperature_2m,apparent_temperature,precipitation,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,'+
              'wind_speed_10m,wind_gusts_10m,wind_direction_10m';
   const extraCloud=PLEV.map(([p])=>`cloud_cover_${p}hPa`).join(',');
   const u=(m,days,extra)=>`https://api.open-meteo.com/v1/forecast?latitude=${l.lat}&longitude=${l.lon}`+
@@ -118,6 +121,7 @@ async function cargar(){
   DATA={
     time:EH.time.map(t=>new Date(t)),
     temp:mix('temperature_2m').map(v=> v==null?null:v+WM02.tempOffset),
+    sens:mix('apparent_temperature'),
     praw:prRaw.map(v=> v==null?0:v),
     cl:mix('cloud_cover_low'), cm:mix('cloud_cover_mid'), ch:mix('cloud_cover_high'), ctot:mix('cloud_cover'),
     wind:mix('wind_speed_10m').map(v=> v==null?null:v*WM02.windFactor),
@@ -173,7 +177,7 @@ function drawChart(cid, s, endIdx, fromStart){
     '<feGaussianBlur in="d" stdDeviation="2.4"/></filter>');
 
   // escalas sobre la ventana
-  const T=[]; for(let j=0;j<nH;j++){const v=D.temp[G(j)]; if(v!=null)T.push(v);}
+  const T=[]; for(let j=0;j<nH;j++){const a=D.temp[G(j)],b=D.sens[G(j)]; if(a!=null)T.push(a); if(b!=null)T.push(b);}
   let tmin=0,tmax=10; if(T.length){ tmin=Math.floor(Math.min(...T)-1); tmax=Math.ceil(Math.max(...T)+1); }
   const tY=t=>plotB-(t-tmin)/((tmax-tmin)||1)*(plotH-16)-8;
   let wmax=25; for(let j=0;j<nH;j++) wmax=Math.max(wmax, D.wind[G(j)]||0, D.gust[G(j)]||0);
@@ -191,7 +195,7 @@ function drawChart(cid, s, endIdx, fromStart){
     return id;};
 
   // NUBES por altitud (perfil de presión ECMWF)
-  if(D.clev&&D.clev.length){
+  if(VISI.nubes && D.clev&&D.clev.length){
     const lev=D.clev.slice().sort((a,b)=>a.z-b.z);
     const zBase=0, zTop=Math.max(2600, lev[lev.length-1].z+800);
     const zY=z=>plotB-(z-zBase)/(zTop-zBase)*plotH;
@@ -214,7 +218,7 @@ function drawChart(cid, s, endIdx, fromStart){
     }
     [2000,4000,6000,8000,10000].forEach(z=>{ if(z>zBase+300&&z<zTop-200){const y=zY(z);
       kmov.appendChild(el('text',{x:20,y:(y+2).toFixed(1),fill:'#60798f','font-size':7.2,'font-weight':700,'text-anchor':'middle',stroke:'#0c1a28','stroke-width':2.6,'paint-order':'stroke'},(z/1000)+' km')); }});
-  }else if(D.ctot&&D.ctot.some(v=>v!=null)){
+  }else if(VISI.nubes && D.ctot&&D.ctot.some(v=>v!=null)){
     const id=gradF('cl'+cid+'t', j=>D.ctot[G(j)]); if(id) svg.appendChild(el('rect',{x:gw0,y:plotT-7,width:(gw1-gw0),height:plotH+14,fill:`url(#${id})`,filter:`url(#${fid})`}));
   }
 
@@ -224,7 +228,7 @@ function drawChart(cid, s, endIdx, fromStart){
   const aEl=(t,a,x)=>{const e=ns(t);for(const k in a)e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;axis.appendChild(e);};
   aEl('text',{x:PADL-4,y:plotT-6,fill:'var(--temp)','font-size':9,'font-weight':800,'text-anchor':'end'},'Temp °C');
   tks(tmin,tmax,4).forEach(v=> aEl('text',{x:PADL-4,y:tY(v)+3,fill:'var(--temp)','font-size':10,'font-weight':700,'text-anchor':'end'},Math.round(v)+'°'));
-  aEl('text',{x:PADL-4,y:plotB+31,fill:'var(--viento)','font-size':9,'font-weight':700,'text-anchor':'end'},'Viento');
+  if(VISI.viento) aEl('text',{x:PADL-4,y:plotB+31,fill:'var(--viento)','font-size':9,'font-weight':700,'text-anchor':'end'},'Viento');
 
   // rejilla vertical + horas + días
   let dAnt='';
@@ -245,13 +249,13 @@ function drawChart(cid, s, endIdx, fromStart){
   svg.appendChild(el('line',{x1:PADL,y1:plotB,x2:gw1,y2:plotB,stroke:'#49708f','stroke-width':1}));
 
   // lluvia (barra final) con mm encima
-  for(let j=0;j<nH;j++){ const cor=PC[j]||0; if(cor<=0)continue; const h=Math.max(1.5,(cor/rmax)*rPx);
+  if(VISI.lluvia) for(let j=0;j<nH;j++){ const cor=PC[j]||0; if(cor<=0)continue; const h=Math.max(1.5,(cor/rmax)*rPx);
     svg.appendChild(el('rect',{x:X(j)+6,y:plotB-h,width:HOURW-12,height:h,rx:2,fill:'var(--lluvia)',opacity:.6}));
     if(cor>=0.5) svg.appendChild(el('text',{x:XC(j),y:plotB-h-3,fill:'#bfe0ff','font-size':9,'font-weight':700,'text-anchor':'middle',stroke:'#0c1a28','stroke-width':2.4,'paint-order':'stroke'},cor.toFixed(1))); }
 
   // viento bajo el plot: UN cuadrito por hora con flecha + velocidad + procedencia (todo en teal)
   const R8=['N','NE','E','SE','S','SW','W','NW'];
-  for(let j=0;j<nH;j++){ const v=D.wind[G(j)], dr=D.dir[G(j)]; if(v==null) continue; const cx=XC(j);
+  if(VISI.viento) for(let j=0;j<nH;j++){ const v=D.wind[G(j)], dr=D.dir[G(j)]; if(v==null) continue; const cx=XC(j);
     svg.appendChild(el('rect',{x:cx-20,y:plotB+2,width:40,height:44,rx:4,fill:'none',stroke:'#2f4b63','stroke-width':1}));
     if(dr!=null) svg.appendChild(el('text',{x:cx,y:plotB+16,fill:'var(--viento)','font-size':14,'font-weight':700,'text-anchor':'middle',transform:`rotate(${dr+180} ${cx} ${plotB+13})`},'↑'));
     svg.appendChild(el('text',{x:cx,y:plotB+31,fill:'var(--viento)','font-size':8.5,'font-weight':800,'text-anchor':'middle'},Math.round(v)+' km/h'));
@@ -260,13 +264,15 @@ function drawChart(cid, s, endIdx, fromStart){
 
   // líneas de viento (+racha) y temperatura
   const pw=f=>{let sp='';for(let j=0;j<nH;j++){const v=D[f][G(j)];if(v==null)continue;sp+=(sp?'L':'M')+XC(j)+' '+wY(v).toFixed(1)+' ';}return sp;};
-  svg.appendChild(el('path',{d:pw('gust'),fill:'none',stroke:'var(--racha)','stroke-width':1,'stroke-dasharray':'3 3',opacity:.6}));
-  svg.appendChild(el('path',{d:pw('wind'),fill:'none',stroke:'var(--viento)','stroke-width':2}));
-  for(let j=0;j<nH;j+=3){ const g=D.gust[G(j)]; if(g==null)continue;   // etiquetas de racha sobre la línea, como la temperatura
+  if(VISI.racha) svg.appendChild(el('path',{d:pw('gust'),fill:'none',stroke:'var(--racha)','stroke-width':1,'stroke-dasharray':'3 3',opacity:.6}));
+  if(VISI.viento) svg.appendChild(el('path',{d:pw('wind'),fill:'none',stroke:'var(--viento)','stroke-width':2}));
+  if(VISI.racha) for(let j=0;j<nH;j+=3){ const g=D.gust[G(j)]; if(g==null)continue;
     svg.appendChild(el('text',{x:XC(j),y:wY(g)-5,fill:'var(--racha)','font-size':9,'font-weight':700,'text-anchor':'middle'},Math.round(g)+' km/h')); }
-  let sp='';for(let j=0;j<nH;j++){const v=D.temp[G(j)];if(v==null)continue;sp+=(sp?'L':'M')+XC(j)+' '+tY(v).toFixed(1)+' ';}
-  svg.appendChild(el('path',{d:sp,fill:'none',stroke:'var(--temp)','stroke-width':2.4}));
-  for(let j=0;j<nH;j+=3){const v=D.temp[G(j)];if(v==null)continue;svg.appendChild(el('text',{x:XC(j),y:tY(v)-7,fill:'#ffb784','font-size':10,'font-weight':700,'text-anchor':'middle'},Math.round(v)+'°'));}
+  if(VISI.sens){ let ss='';for(let j=0;j<nH;j++){const v=D.sens[G(j)];if(v==null)continue;ss+=(ss?'L':'M')+XC(j)+' '+tY(v).toFixed(1)+' ';}
+    svg.appendChild(el('path',{d:ss,fill:'none',stroke:'var(--sens)','stroke-width':2,'stroke-dasharray':'5 3',opacity:.9})); }
+  if(VISI.temp){ let sp='';for(let j=0;j<nH;j++){const v=D.temp[G(j)];if(v==null)continue;sp+=(sp?'L':'M')+XC(j)+' '+tY(v).toFixed(1)+' ';}
+    svg.appendChild(el('path',{d:sp,fill:'none',stroke:'var(--temp)','stroke-width':2.4}));
+    for(let j=0;j<nH;j+=3){const v=D.temp[G(j)];if(v==null)continue;svg.appendChild(el('text',{x:XC(j),y:tY(v)-7,fill:'#ffb784','font-size':10,'font-weight':700,'text-anchor':'middle'},Math.round(v)+'°'));} }
 
   // transición AROME -> ECMWF (si cae en la ventana)
   let it=-1; for(let j=0;j<nH;j++){ if(D.src[G(j)]==='E'){it=j;break;} }
@@ -321,6 +327,9 @@ function mostrar(i){
 document.addEventListener('click', e=>{ if(!e.target.closest('.mg-wrap')) tip.style.display='none'; });
 
 sel.addEventListener('change', cargar);
+document.querySelectorAll('.leg b[data-k]').forEach(b=>{ const k=b.dataset.k;
+  b.classList.toggle('off', !VISI[k]);
+  b.addEventListener('click',()=>{ VISI[k]=!VISI[k]; b.classList.toggle('off',!VISI[k]); if(DATA) pintarTodo(); }); });
 document.getElementById('foot').innerHTML =
   'Prototipo de nueva Previsión (meteograma apilado). Solo los 7 primeros días: el primer bloque es la semana completa y cada bloque de abajo empieza un día después (el último, solo 24 h). '+
   '<b>AROME</b> mientras cubre (primeras ~48 h), luego <b>ECMWF</b>. Lluvia con corrección <b>WM1.0</b> (realce solo con flujo del <b>S/SO/O</b>). '+
