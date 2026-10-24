@@ -104,17 +104,17 @@ let DATA=null;
 const VISI={nubes:true,temp:true,sens:false,lluvia:true,viento:true,racha:false};
 let MODE='det', DATAGEN=null;
 function DS(){ return (MODE==='gen'&&DATAGEN)?DATAGEN:DATA; }
-function buildGen(){   // agrega cada 3 h: medias (y suma de lluvia)
-  const n=DATA.time.length, m=Math.ceil(n/3);
-  const avg=(arr,i)=>{let s=0,c=0;for(let k=i*3;k<i*3+3&&k<n;k++){const v=arr[k];if(v!=null){s+=v;c++;}}return c?s/c:null;};
-  const sum=(arr,i)=>{let s=0;for(let k=i*3;k<i*3+3&&k<n;k++)s+=arr[k]||0;return s;};
-  const dirA=(i)=>{let x=0,y=0,c=0;for(let k=i*3;k<i*3+3&&k<n;k++){const d=DATA.dir[k];if(d!=null){x+=Math.cos(d*Math.PI/180);y+=Math.sin(d*Math.PI/180);c++;}}if(!c)return null;return (Math.atan2(y,x)*180/Math.PI+360)%360;};
+function buildGen(){   // agrega cada 6 h (4 bloques/día): medias (y suma de lluvia)
+  const n=DATA.time.length, B=6, m=Math.ceil(n/B);
+  const avg=(arr,i)=>{let s=0,c=0;for(let k=i*B;k<i*B+B&&k<n;k++){const v=arr[k];if(v!=null){s+=v;c++;}}return c?s/c:null;};
+  const sum=(arr,i)=>{let s=0;for(let k=i*B;k<i*B+B&&k<n;k++)s+=arr[k]||0;return s;};
+  const dirA=(i)=>{let x=0,y=0,c=0;for(let k=i*B;k<i*B+B&&k<n;k++){const d=DATA.dir[k];if(d!=null){x+=Math.cos(d*Math.PI/180);y+=Math.sin(d*Math.PI/180);c++;}}if(!c)return null;return (Math.atan2(y,x)*180/Math.PI+360)%360;};
   const col=(f)=>Array.from({length:m},(_,i)=>f(i));
-  const g={ time:col(i=>DATA.time[i*3]), src:col(i=>DATA.src[i*3]),
+  const g={ time:col(i=>DATA.time[i*B]), src:col(i=>DATA.src[i*B]),
     temp:col(i=>avg(DATA.temp,i)), sens:col(i=>avg(DATA.sens,i)), praw:col(i=>sum(DATA.praw,i)),
     cl:col(i=>avg(DATA.cl,i)), cm:col(i=>avg(DATA.cm,i)), ch:col(i=>avg(DATA.ch,i)), ctot:col(i=>avg(DATA.ctot,i)),
     wind:col(i=>avg(DATA.wind,i)), gust:col(i=>avg(DATA.gust,i)), dir:col(i=>dirA(i)),
-    l:DATA.l, nA:Math.ceil(DATA.nA/3) };
+    l:DATA.l, nA:Math.ceil(DATA.nA/B) };
   g.clev=(DATA.clev||[]).map(L=>({z:L.z, arr:col(i=>avg(L.arr,i))}));
   return g;
 }
@@ -169,20 +169,27 @@ function setFuente(){
 function pintarTodo(){
   const host=document.getElementById('charts'); host.innerHTML='';
   if(!DATA){ return; }
-  const D=DS(), SPD=(MODE==='gen'?8:24);
-  const now=new Date(); let nowIdx=0;
-  for(let i=0;i<D.time.length-1;i++){ if(D.time[i]<=now && now<D.time[i+1]){ nowIdx=i; break; } }
-  const end7=Math.min(D.time.length, 7*SPD);
-  const end15=Math.min(D.time.length, 15*SPD);
-  drawChart(0, nowIdx, end15, true);                        // 1ª gráfica: desde AHORA
-  for(let k=1; k*SPD < end7; k++) drawChart(k, k*SPD, end7, false);  // 2-7: ventana central, con cabecera pegajosa
+  const D=DS();
+  if(MODE==='gen'){            // general: una gráfica por día (4 bloques de 6 h que llenan el ancho)
+    const perDay=4, days=Math.min(7, Math.ceil(D.time.length/perDay));
+    for(let k=0;k<days && k*perDay<D.time.length;k++) drawChart(k, k*perDay, Math.min(D.time.length, k*perDay+perDay), true);
+  } else {                     // detallada: horaria, con scroll
+    const now=new Date(); let nowIdx=0;
+    for(let i=0;i<D.time.length-1;i++){ if(D.time[i]<=now && now<D.time[i+1]){ nowIdx=i; break; } }
+    const end7=Math.min(D.time.length, 7*24), end15=Math.min(D.time.length, 15*24);
+    drawChart(0, nowIdx, end15, true);
+    for(let k=1; k*24 < end7; k++) drawChart(k, k*24, end7, false);
+  }
   setFuente();
 }
 
 /* ===== una gráfica (ventana de 7 días desde el índice s) ===== */
 function drawChart(cid, s, endIdx, fromStart){
   const D=DS(), N=D.time.length, nH=endIdx - s;
-  if(nH<6) return;
+  if(nH<1) return;
+  const GEN=(MODE==='gen');
+  const SW = GEN ? Math.max(48, ((document.getElementById('charts').clientWidth||innerWidth)-PADL-PADR)/4) : HOURW;
+  const stepMs = GEN ? 6*3600000 : 3600000;
   const box=document.createElement('div'); box.className='mg-box';
   const posic=document.createElement('div'); posic.className='mg-posic';
   const wrap=document.createElement('div'); wrap.className='mg-wrap';
@@ -196,9 +203,9 @@ function drawChart(cid, s, endIdx, fromStart){
   box.appendChild(posic);
   document.getElementById('charts').appendChild(box);
 
-  const W=PADL+PADR+nH*HOURW, gw0=PADL, gw1=W-PADR;
+  const W=PADL+PADR+nH*SW, gw0=PADL, gw1=W-PADR;
   svg.setAttribute('width',W); svg.setAttribute('height',Hsvg); svg.setAttribute('viewBox',`0 0 ${W} ${Hsvg}`);
-  const X=j=>PADL+j*HOURW, XC=j=>X(j)+HOURW/2, G=j=>s+j;
+  const X=j=>PADL+j*SW, XC=j=>X(j)+SW/2, G=j=>s+j;
 
   const defs=ns('defs'); svg.appendChild(defs);
   const fid='f'+cid;
@@ -246,7 +253,7 @@ function drawChart(cid, s, endIdx, fromStart){
       for(let j=0;j<nH;j++){ let sp=0,sz=0,sf=0,cnt=0;
         for(const l of high){ const c=l.arr[G(j)]; if(c==null||c<HI_MIN) continue; cnt++; sp+=c; sf+=c/100; sz+=(c/100)*l.z; }
         if(!cnt) continue; const mc=sp/cnt, mz=sz/sf; const y=zY(mz);
-        g.appendChild(el('rect',{x:X(j),y:(y-5).toFixed(1),width:HOURW,height:10,fill:grisCover(mc),opacity:alphaCover(mc)})); }
+        g.appendChild(el('rect',{x:X(j),y:(y-5).toFixed(1),width:SW,height:10,fill:grisCover(mc),opacity:alphaCover(mc)})); }
     }
     [2000,4000,6000,8000,10000].forEach(z=>{ if(z>zBase+300&&z<zTop-200){const y=zY(z);
       kmov.appendChild(el('text',{x:20,y:(y+2).toFixed(1),fill:'#60798f','font-size':7.2,'font-weight':700,'text-anchor':'middle',stroke:'#0c1a28','stroke-width':2.6,'paint-order':'stroke'},(z/1000)+' km')); }});
@@ -273,7 +280,7 @@ function drawChart(cid, s, endIdx, fromStart){
 
   // lluvia (barra final) con mm encima
   if(VISI.lluvia) for(let j=0;j<nH;j++){ const cor=PC[j]||0; if(cor<=0)continue; const h=Math.max(1.5,(cor/rmax)*rPx);
-    svg.appendChild(el('rect',{x:X(j)+6,y:plotB-h,width:HOURW-12,height:h,rx:2,fill:'var(--lluvia)',opacity:.6}));
+    svg.appendChild(el('rect',{x:X(j)+6,y:plotB-h,width:SW-12,height:h,rx:2,fill:'var(--lluvia)',opacity:.6}));
     if(cor>=0.5) svg.appendChild(el('text',{x:XC(j),y:plotB-h-3,fill:'#bfe0ff','font-size':9,'font-weight':700,'text-anchor':'middle',stroke:'#0c1a28','stroke-width':2.4,'paint-order':'stroke'},cor.toFixed(1))); }
 
   // viento bajo el plot: UN cuadrito por hora con flecha + velocidad + procedencia (todo en teal)
@@ -306,7 +313,7 @@ function drawChart(cid, s, endIdx, fromStart){
 
   // "ahora"
   const now=new Date();
-  for(let j=0;j<nH-1;j++){ if(D.time[G(j)]<=now&&now<D.time[G(j)+1]){ const xn=XC(j)+(now-D.time[G(j)])/3600000*HOURW;
+  for(let j=0;j<nH-1;j++){ if(D.time[G(j)]<=now&&now<D.time[G(j)+1]){ const xn=XC(j)+(now-D.time[G(j)])/stepMs*SW;
     svg.appendChild(el('line',{x1:xn,y1:plotT-6,x2:xn,y2:plotB,stroke:'#ffd166','stroke-width':1,'stroke-dasharray':'2 5',opacity:.45}));
     svg.appendChild(el('text',{x:xn+3,y:plotT+2,fill:'#ffd166','font-size':9,'font-weight':700},'ahora')); break; } }
 
@@ -318,7 +325,7 @@ function drawChart(cid, s, endIdx, fromStart){
       let cnt=0,tot=0,tmn=Infinity,tmx=-Infinity;
       while(jj+cnt<nH && (D.time[G(jj+cnt)].getDate()+'-'+D.time[G(jj+cnt)].getMonth())===dk){
         tot+=PC[jj+cnt]||0; const tv=D.temp[G(jj+cnt)]; if(tv!=null){if(tv<tmn)tmn=tv;if(tv>tmx)tmx=tv;} cnt++; }
-      const sec=document.createElement('div'); sec.className='daysec'; sec.style.width=(cnt*HOURW)+'px';
+      const sec=document.createElement('div'); sec.className='daysec'; sec.style.width=(cnt*SW)+'px';
       const lbl=document.createElement('div'); lbl.className='daylbl';
       lbl.innerHTML=`${DIAS[d.getDay()]} ${d.getDate()} ${capMes(d.getMonth())} `+
         `<span style="color:#7fc0ff;font-size:12px;font-weight:700">(${tot.toFixed(1)}mm)</span>`+
@@ -331,7 +338,7 @@ function drawChart(cid, s, endIdx, fromStart){
   });
 
   // tooltip (toca una hora)
-  svg.addEventListener('click', e=>{ const r=svg.getBoundingClientRect(); const j=Math.floor((e.clientX-r.left-PADL)/HOURW);
+  svg.addEventListener('click', e=>{ const r=svg.getBoundingClientRect(); const j=Math.floor((e.clientX-r.left-PADL)/SW);
     if(j<0||j>=nH){ tip.style.display='none'; return; } mostrar(G(j)); });
 }
 
