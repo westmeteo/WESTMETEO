@@ -221,7 +221,7 @@ function drawChart(cid, s, endIdx, fromStart){
   tks(tmin,tmax,4).forEach(v=> svg.appendChild(el('line',{x1:PADL,y1:tY(v),x2:gw1,y2:tY(v),stroke:'#2a3f54','stroke-width':1,opacity:.45})));
   axis.setAttribute('width',PADL); axis.setAttribute('height',Hsvg); axis.setAttribute('viewBox',`0 0 ${PADL} ${Hsvg}`);
   const aEl=(t,a,x)=>{const e=ns(t);for(const k in a)e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;axis.appendChild(e);};
-  aEl('text',{x:PADL-4,y:plotT-6,fill:'var(--temp)','font-size':9,'font-weight':800,'text-anchor':'end'},'°C');
+  aEl('text',{x:PADL-4,y:plotT-6,fill:'var(--temp)','font-size':9,'font-weight':800,'text-anchor':'end'},'Temp °C');
   tks(tmin,tmax,4).forEach(v=> aEl('text',{x:PADL-4,y:tY(v)+3,fill:'var(--temp)','font-size':10,'font-weight':700,'text-anchor':'end'},Math.round(v)+'°'));
   aEl('text',{x:PADL-4,y:plotB+31,fill:'#5fe0c0','font-size':9,'font-weight':700,'text-anchor':'end'},'Viento');
 
@@ -274,7 +274,7 @@ function drawChart(cid, s, endIdx, fromStart){
   // "ahora"
   const now=new Date();
   for(let j=0;j<nH-1;j++){ if(D.time[G(j)]<=now&&now<D.time[G(j)+1]){ const xn=XC(j)+(now-D.time[G(j)])/3600000*HOURW;
-    svg.appendChild(el('line',{x1:xn,y1:plotT-6,x2:xn,y2:plotB,stroke:'#ffd166','stroke-width':1.5,opacity:.9}));
+    svg.appendChild(el('line',{x1:xn,y1:plotT-6,x2:xn,y2:plotB,stroke:'#ffd166','stroke-width':1,'stroke-dasharray':'2 5',opacity:.45}));
     svg.appendChild(el('text',{x:xn+3,y:plotT+2,fill:'#ffd166','font-size':9,'font-weight':700},'ahora')); break; } }
 
   // scroll inicial: la 1ª gráfica desde el inicio (ahora); las demás saltan a las 06:00
