@@ -50,7 +50,6 @@
   <b><span class="sw" style="background:var(--temp)"></span>Temperatura (°C)</b>
   <b><span class="sw" style="background:var(--viento)"></span>Viento (km/h)</b>
   <b><span class="sw sq" style="background:var(--lluvia);opacity:.6"></span>Lluvia (mm/h)</b>
-  <b><span class="sw sq" style="background:#bfe0ff;opacity:.6"></span>Realce WM0.2</b>
   <b><span class="sw sq" style="background:#9fb8d0;opacity:.5"></span>Nubes A/M/B (%)</b>
 </div>
 <div class="mg-wrap" id="wrap"><svg id="svg"></svg></div>
@@ -191,12 +190,10 @@ function render(){
   // base
   svg.appendChild(el('line',{x1:PADL,y1:plotB,x2:W-PADR,y2:plotB,stroke:'#49708f','stroke-width':1}));
 
-  // --- lluvia (barras): base = modelo en crudo; casquete claro = realce WM0.2 ---
-  for(let i=0;i<N;i++){ const raw=D.praw[i]||0, cor=PC[i]||0; if(cor<=0) continue;
-    const hRaw=raw>0?Math.max(1.5,(raw/rmax)*rPx):0;
-    const hCor=Math.max(1.5,(cor/rmax)*rPx);
-    if(hRaw>0) svg.appendChild(el('rect',{x:X(i)+6,y:plotB-hRaw,width:HOURW-12,height:hRaw,rx:2,fill:'var(--lluvia)',opacity:.55}));
-    if(cor>raw+0.05) svg.appendChild(el('rect',{x:X(i)+6,y:plotB-hCor,width:HOURW-12,height:hCor-hRaw,rx:2,fill:'#bfe0ff',opacity:.5}));
+  // --- lluvia (barras): valor final para el usuario ---
+  for(let i=0;i<N;i++){ const cor=PC[i]||0; if(cor<=0) continue;
+    const h=Math.max(1.5,(cor/rmax)*rPx);
+    svg.appendChild(el('rect',{x:X(i)+6,y:plotB-h,width:HOURW-12,height:h,rx:2,fill:'var(--lluvia)',opacity:.6}));
   }
 
   // --- flechas de dirección de viento (franja superior) ---
@@ -252,7 +249,7 @@ function mostrar(clientX){
     : `${DATA.ctot?.[i]??'–'} %`;
   tip.innerHTML=`<h4>${DIAS[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()]} · ${String(d.getHours()).padStart(2,'0')}:00</h4>`+
     `<div class="r"><span class="k">Temp</span><b>${DATA.temp[i]!=null?Math.round(DATA.temp[i])+'°':'–'}</b></div>`+
-    `<div class="r"><span class="k">Lluvia</span><b>${prC>0?prC.toFixed(1)+' mm':'0'}${prC>prR+0.05?' <span style="color:#bfe0ff">(WM0.2)</span>':''}</b></div>`+
+    `<div class="r"><span class="k">Lluvia</span><b>${prC>0?prC.toFixed(1)+' mm':'0'}</b></div>`+
     `<div class="r"><span class="k">Viento</span><b>${DATA.wind[i]!=null?Math.round(DATA.wind[i]):'–'} ${rumbo}${DATA.gust[i]>DATA.wind[i]+10?' ('+Math.round(DATA.gust[i])+')':''}</b></div>`+
     `<div class="r"><span class="k">Nubes</span><b>${nub}</b></div>`+
     `<div class="r"><span class="k">Modelo</span><b>${DATA.src&&DATA.src[i]==='A'?'AROME':'ECMWF'}</b></div>`;
