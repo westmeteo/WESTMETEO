@@ -50,7 +50,7 @@
   <b><span class="sw" style="background:var(--temp)"></span>Temperatura (°C)</b>
   <b><span class="sw" style="background:var(--viento)"></span>Viento (km/h)</b>
   <b><span class="sw sq" style="background:var(--lluvia);opacity:.6"></span>Lluvia (mm/h)</b>
-  <b><span class="sw sq" style="background:#9fb8d0;opacity:.5"></span>Nubes A/M/B (%)</b>
+  <b><span class="sw sq" style="background:linear-gradient(90deg,#d8dee4,#4a535c)"></span>Nubes A/M/B (claro→oscuro = %)</b>
 </div>
 <div class="mg-wrap" id="wrap"><svg id="svg"></svg></div>
 <div class="hint">Desliza con el dedo ← → · toca para ver los datos de una hora</div>
@@ -152,21 +152,31 @@ function render(){
   const rmax=Math.max(3, ...PC);
   const rPx=plotH*0.42;
 
-  // --- fondo: nubes por alturas (3 bandas: A arriba, M medio, B abajo) ---
-  const bandH=plotH/3, cloudCol='#9fb8d0';
-  const anyLevels = D.cl && D.cl.some(v=>v!=null);
-  for(let i=0;i<N;i++){
-    const hasLev = D.cl && (D.cl[i]!=null||D.cm[i]!=null||D.ch[i]!=null);
-    if(hasLev){     // AROME (y ECMWF si trae niveles): 3 bandas por altura
-      const levs=[[D.ch[i],plotT],[D.cm[i],plotT+bandH],[D.cl[i],plotT+2*bandH]];
-      levs.forEach(([c,y])=>{ if(c==null)return; const op=Math.max(0,Math.min(1,c/100))*0.5;
-        if(op>0.02) svg.appendChild(el('rect',{x:X(i),y:y,width:HOURW,height:bandH,fill:cloudCol,opacity:op.toFixed(3)})); });
-    }else if(D.ctot && D.ctot[i]!=null){   // ECMWF sin niveles: una banda con la nubosidad total
-      const op=D.ctot[i]/100*0.45; if(op>0.02) svg.appendChild(el('rect',{x:X(i),y:plotT,width:HOURW,height:plotH,fill:cloudCol,opacity:op.toFixed(3)}));
-    }
+  // --- fondo: NUBES realistas por altura (gris claro->oscuro según %, textura fractal, continuas) ---
+  const defs=ns('defs'); svg.appendChild(defs);
+  defs.insertAdjacentHTML('beforeend',
+    '<filter id="fluffy" x="-8%" y="-45%" width="116%" height="190%">'+
+    '<feTurbulence type="fractalNoise" baseFrequency="0.011 0.045" numOctaves="4" seed="11" result="n"/>'+
+    '<feDisplacementMap in="SourceGraphic" in2="n" scale="30" xChannelSelector="R" yChannelSelector="G" result="d"/>'+
+    '<feGaussianBlur in="d" stdDeviation="2.4"/></filter>');
+  const bandH=plotH/3, gw0=PADL, gw1=W-PADR;
+  const grisCover=c=>{ const f=Math.max(0,Math.min(1,c/100)); const L=Math.round(216-f*154); return `rgb(${L},${L+5},${L+11})`; }; // claro->oscuro
+  const alphaCover=c=>{ const f=Math.max(0,Math.min(1,c/100)); return (Math.pow(f,0.8)*0.92).toFixed(3); };               // claro=transparente
+  const gradHora=(id,arr,mid)=>{ let stops='',has=false;
+    for(let i=0;i<N;i++){ let c=arr?arr[i]:null; if(c==null&&mid)c=D.ctot?D.ctot[i]:null; if(c==null)continue; has=true;
+      stops+=`<stop offset="${((i+0.5)/N).toFixed(4)}" stop-color="${grisCover(c)}" stop-opacity="${alphaCover(c)}"/>`; }
+    if(!has) return false;
+    defs.insertAdjacentHTML('beforeend',`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${gw0}" y1="0" x2="${gw1}" y2="0">${stops}</linearGradient>`);
+    return true; };
+  const anyLevels=(D.cl&&D.cl.some(v=>v!=null))||(D.cm&&D.cm.some(v=>v!=null))||(D.ch&&D.ch.some(v=>v!=null));
+  const banda=(y,id)=> svg.appendChild(el('rect',{x:gw0,y:(y-7).toFixed(1),width:(gw1-gw0),height:(bandH+14).toFixed(1),fill:`url(#${id})`,filter:'url(#fluffy)'}));
+  if(anyLevels){
+    [['A',D.ch,false],['M',D.cm,true],['B',D.cl,false]].forEach(([L,arr,mid],bi)=>{
+      if(gradHora('cg_'+bi,arr,mid)) banda(plotT+bi*bandH,'cg_'+bi); });
+    ['A','M','B'].forEach((L,k)=> svg.appendChild(el('text',{x:3,y:plotT+bandH*k+bandH/2+4,fill:'#7fa0bb','font-size':10,'font-weight':700},L)));
+  }else if(D.ctot&&D.ctot.some(v=>v!=null)){
+    if(gradHora('cg_t',D.ctot,false)) svg.appendChild(el('rect',{x:gw0,y:plotT-7,width:(gw1-gw0),height:plotH+14,fill:'url(#cg_t)',filter:'url(#fluffy)'}));
   }
-  // etiquetas A/M/B del fondo de nubes
-  if(anyLevels)['A','M','B'].forEach((L,k)=> svg.appendChild(el('text',{x:3,y:plotT+bandH*k+bandH/2+4,fill:'#6c8aa6','font-size':10,'font-weight':700},L)));
 
   // --- rejilla vertical + etiquetas de hora + separadores de día ---
   let dAnt='';
