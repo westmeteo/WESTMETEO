@@ -188,16 +188,14 @@ function drawChart(cid, s, endIdx){
     defs.insertAdjacentHTML('beforeend',`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${gw0}" y1="0" x2="${gw1}" y2="0">${st}</linearGradient>`);
     return id;};
 
-  // NUBES por altitud (perfil de presión ECMWF): lámina fina por nivel; niveles seguidos con nube -> unidos
+  // NUBES por altitud (perfil de presión ECMWF): una lámina por nivel, fina arriba (cirros) y más gruesa abajo (decks)
   if(D.clev&&D.clev.length){
     const lev=D.clev.slice().sort((a,b)=>a.z-b.z);
     const zBase=0, zTop=Math.max(2600, lev[lev.length-1].z+800);
-    const zY=z=>plotB-(z-zBase)/(zTop-zBase)*plotH, THc=22;
-    for(let k=0;k<lev.length-1;k++){ const lo=lev[k], hi=lev[k+1];
-      const id=gradF(`br${cid}_${k}`, j=>{ const a=lo.arr[G(j)], b=hi.arr[G(j)]; return (a!=null&&b!=null&&a>0&&b>0)?Math.min(a,b):null; });
-      if(id){ const y1=zY(hi.z), y2=zY(lo.z); svg.appendChild(el('rect',{x:gw0,y:y1.toFixed(1),width:(gw1-gw0),height:(y2-y1).toFixed(1),fill:`url(#${id})`,filter:`url(#${fid})`})); } }
-    lev.forEach((l,k)=>{ const id=gradF(`cl${cid}_${k}`, j=>l.arr[G(j)]); if(!id)return; const y=zY(l.z);
-      svg.appendChild(el('rect',{x:gw0,y:(y-THc/2).toFixed(1),width:(gw1-gw0),height:THc,fill:`url(#${id})`,filter:`url(#${fid})`})); });
+    const zY=z=>plotB-(z-zBase)/(zTop-zBase)*plotH;
+    const thick=z=>Math.max(9, 26-(z/12000)*17);   // ~26px cerca de superficie -> ~9px a 12 km
+    lev.forEach((l,k)=>{ const id=gradF(`cl${cid}_${k}`, j=>l.arr[G(j)]); if(!id)return; const y=zY(l.z), h=thick(l.z);
+      svg.appendChild(el('rect',{x:gw0,y:(y-h/2).toFixed(1),width:(gw1-gw0),height:h.toFixed(1),fill:`url(#${id})`,filter:`url(#${fid})`})); });
     [2000,4000,6000,8000,10000].forEach(z=>{ if(z>zBase+300&&z<zTop-200){const y=zY(z);
       kmov.appendChild(el('text',{x:20,y:(y+2).toFixed(1),fill:'#60798f','font-size':7.2,'font-weight':700,'text-anchor':'middle',stroke:'#0c1a28','stroke-width':2.6,'paint-order':'stroke'},(z/1000)+' km')); }});
   }else if(D.ctot&&D.ctot.some(v=>v!=null)){
