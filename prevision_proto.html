@@ -19,6 +19,9 @@
   .leg b{display:inline-flex;align-items:center;gap:6px;font-weight:600;cursor:pointer;user-select:none;transition:.15s;
          border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:999px;padding:5px 12px}
   .leg b.off{opacity:.45;background:none;border-color:#2a3f54}
+  .modes{display:flex;gap:10px;justify-content:center;padding:2px 14px 10px}
+  .mode{font:700 13px system-ui,sans-serif;color:var(--ink2);background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;padding:8px 18px;cursor:pointer}
+  .mode.on{background:#2980b9;color:#fff;border-color:#2980b9}
   .sw{width:16px;height:4px;border-radius:2px;display:inline-block}
   .sw.sq{height:11px;width:11px;border-radius:2px}
   #charts .mg-box{margin-top:16px}
@@ -64,6 +67,7 @@
   <b data-k="racha"><span class="sw" style="background:repeating-linear-gradient(90deg,var(--racha) 0 3px,transparent 3px 6px)"></span>Racha</b>
   <b data-k="nubes"><span class="sw sq" style="background:linear-gradient(90deg,#d8dee4,#4a535c)"></span>Nubes</b>
 </div>
+<div class="modes"><button id="mDet" class="mode on">Previsión detallada</button><button id="mGen" class="mode">Previsión general</button></div>
 <div id="charts"></div>
 <div class="hint">Cada bloque = 7 días; el siguiente empieza un día después · desliza con el dedo ← → · toca una hora</div>
 <div id="tip"></div>
@@ -98,6 +102,22 @@ const sel=document.getElementById('sel'), tip=document.getElementById('tip');
 LUGARES.forEach(l=>{const o=document.createElement('option');o.value=l.id;o.textContent=l.n;sel.appendChild(o);});
 let DATA=null;
 const VISI={nubes:true,temp:true,sens:false,lluvia:true,viento:true,racha:false};
+let MODE='det', DATAGEN=null;
+function DS(){ return (MODE==='gen'&&DATAGEN)?DATAGEN:DATA; }
+function buildGen(){   // agrega cada 3 h: medias (y suma de lluvia)
+  const n=DATA.time.length, m=Math.ceil(n/3);
+  const avg=(arr,i)=>{let s=0,c=0;for(let k=i*3;k<i*3+3&&k<n;k++){const v=arr[k];if(v!=null){s+=v;c++;}}return c?s/c:null;};
+  const sum=(arr,i)=>{let s=0;for(let k=i*3;k<i*3+3&&k<n;k++)s+=arr[k]||0;return s;};
+  const dirA=(i)=>{let x=0,y=0,c=0;for(let k=i*3;k<i*3+3&&k<n;k++){const d=DATA.dir[k];if(d!=null){x+=Math.cos(d*Math.PI/180);y+=Math.sin(d*Math.PI/180);c++;}}if(!c)return null;return (Math.atan2(y,x)*180/Math.PI+360)%360;};
+  const col=(f)=>Array.from({length:m},(_,i)=>f(i));
+  const g={ time:col(i=>DATA.time[i*3]), src:col(i=>DATA.src[i*3]),
+    temp:col(i=>avg(DATA.temp,i)), sens:col(i=>avg(DATA.sens,i)), praw:col(i=>sum(DATA.praw,i)),
+    cl:col(i=>avg(DATA.cl,i)), cm:col(i=>avg(DATA.cm,i)), ch:col(i=>avg(DATA.ch,i)), ctot:col(i=>avg(DATA.ctot,i)),
+    wind:col(i=>avg(DATA.wind,i)), gust:col(i=>avg(DATA.gust,i)), dir:col(i=>dirA(i)),
+    l:DATA.l, nA:Math.ceil(DATA.nA/3) };
+  g.clev=(DATA.clev||[]).map(L=>({z:L.z, arr:col(i=>avg(L.arr,i))}));
+  return g;
+}
 
 function ns(t){return document.createElementNS('http://www.w3.org/2000/svg',t);}
 function el(t,a,txt){const e=ns(t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;}
@@ -137,6 +157,7 @@ async function cargar(){
   };
   DATA.l=l; DATA.nA=src.filter(s=>s==='A').length;
   DATA.clev=PLEV.map(([p,z])=>({z,arr:EH['cloud_cover_'+p+'hPa']})).filter(o=>o.arr&&o.arr.some(v=>v!=null&&v>3));
+  DATAGEN=buildGen();
   pintarTodo();
 }
 
@@ -148,18 +169,19 @@ function setFuente(){
 function pintarTodo(){
   const host=document.getElementById('charts'); host.innerHTML='';
   if(!DATA){ return; }
+  const D=DS(), SPD=(MODE==='gen'?8:24);
   const now=new Date(); let nowIdx=0;
-  for(let i=0;i<DATA.time.length-1;i++){ if(DATA.time[i]<=now && now<DATA.time[i+1]){ nowIdx=i; break; } }
-  const end7=Math.min(DATA.time.length, 7*24);
-  const end15=Math.min(DATA.time.length, 15*24);
+  for(let i=0;i<D.time.length-1;i++){ if(D.time[i]<=now && now<D.time[i+1]){ nowIdx=i; break; } }
+  const end7=Math.min(D.time.length, 7*SPD);
+  const end15=Math.min(D.time.length, 15*SPD);
   drawChart(0, nowIdx, end15, true);                        // 1ª gráfica: desde AHORA
-  for(let k=1; k*24 < end7; k++) drawChart(k, k*24, end7, false);  // 2-7: ventana central (08:00), con cabecera pegajosa
+  for(let k=1; k*SPD < end7; k++) drawChart(k, k*SPD, end7, false);  // 2-7: ventana central, con cabecera pegajosa
   setFuente();
 }
 
 /* ===== una gráfica (ventana de 7 días desde el índice s) ===== */
 function drawChart(cid, s, endIdx, fromStart){
-  const D=DATA, N=D.time.length, nH=endIdx - s;
+  const D=DS(), N=D.time.length, nH=endIdx - s;
   if(nH<6) return;
   const box=document.createElement('div'); box.className='mg-box';
   const posic=document.createElement('div'); posic.className='mg-posic';
@@ -328,22 +350,26 @@ function nubesTexto(ch,cm,cl,ctot){
 }
 function mostrar(i){
   if(!DATA) return;
-  const d=DATA.time[i], dr=DATA.dir[i];
+  const DA=DS();
+  const d=DA.time[i], dr=DA.dir[i];
   const rumbo= dr==null?'–':RUMBOS[Math.round(dr/22.5)%16];
-  const prC=precipCorr(DATA.praw[i]||0, dr, DATA.src?DATA.src[i]:'E');
-  const nub=nubesTexto(DATA.ch?.[i], DATA.cm?.[i], DATA.cl?.[i], DATA.ctot?.[i]);
+  const prC=precipCorr(DA.praw[i]||0, dr, DA.src?DA.src[i]:'E');
+  const nub=nubesTexto(DA.ch?.[i], DA.cm?.[i], DA.cl?.[i], DA.ctot?.[i]);
   tip.innerHTML=`<span class="tipx">✕</span><h4>${DIAS[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()]} · ${String(d.getHours()).padStart(2,'0')}:00</h4>`+
-    `<div class="r"><span class="k">Temp</span><b>${DATA.temp[i]!=null?Math.round(DATA.temp[i])+'°':'–'}</b></div>`+
+    `<div class="r"><span class="k">Temp</span><b>${DA.temp[i]!=null?Math.round(DA.temp[i])+'°':'–'}</b></div>`+
     `<div class="r"><span class="k">Lluvia</span><b>${prC>0?prC.toFixed(1)+' mm':'0'}</b></div>`+
-    `<div class="r"><span class="k">Viento</span><b>${DATA.wind[i]!=null?Math.round(DATA.wind[i]):'–'} ${rumbo}${DATA.gust[i]>DATA.wind[i]+10?' ('+Math.round(DATA.gust[i])+')':''}</b></div>`+
+    `<div class="r"><span class="k">Viento</span><b>${DA.wind[i]!=null?Math.round(DA.wind[i]):'–'} ${rumbo}${DA.gust[i]>DA.wind[i]+10?' ('+Math.round(DA.gust[i])+')':''}</b></div>`+
     `<div class="r"><span class="k">Nubes</span><b>${nub}</b></div>`+
-    `<div class="r"><span class="k">Modelo</span><b>${DATA.src&&DATA.src[i]==='A'?'AROME':'ECMWF'} + WM1.0</b></div>`;
+    `<div class="r"><span class="k">Modelo</span><b>${DA.src&&DA.src[i]==='A'?'AROME':'ECMWF'} + WM1.0</b></div>`;
   tip.style.display='block';
 }
 document.addEventListener('click', e=>{ if(!e.target.closest('.mg-wrap') && !e.target.closest('#tip')) tip.style.display='none'; });
 tip.addEventListener('click', e=>{ if(e.target.closest('.tipx')) tip.style.display='none'; });
 
 sel.addEventListener('change', cargar);
+{ const mDet=document.getElementById('mDet'), mGen=document.getElementById('mGen');
+  const setMode=m=>{ MODE=m; mDet.classList.toggle('on',m==='det'); mGen.classList.toggle('on',m==='gen'); if(DATA) pintarTodo(); };
+  mDet.addEventListener('click',()=>setMode('det')); mGen.addEventListener('click',()=>setMode('gen')); }
 document.querySelectorAll('.leg b[data-k]').forEach(b=>{ const k=b.dataset.k;
   b.classList.toggle('off', !VISI[k]);
   b.addEventListener('click',()=>{ VISI[k]=!VISI[k]; b.classList.toggle('off',!VISI[k]); if(DATA) pintarTodo(); }); });
