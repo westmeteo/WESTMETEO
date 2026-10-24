@@ -397,9 +397,9 @@ function drawChart(cid, s, endIdx, fromStart){
           fill:'#ffffff','font-size':size,'font-weight':900,'text-anchor':'middle','letter-spacing':(size*0.05).toFixed(1),
           'font-family':'Arial,Helvetica,sans-serif'},t))); } }
     };
-    banda(bx(6),  bx(8),  ['confianza baja'],      26, 0.14, 330, 150);           // días 6-7
-    banda(bx(8),  bx(10), ['confianza muy baja'],  26, 0.15, 360, 150);           // días 8-9
-    banda(bx(10), gw1,    ['CIENCIA','FICCIÓN'],    60, 0.17, 520, 210);           // día 10 en adelante
+    banda(bx(6),  bx(9),  ['confianza baja'],      26, 0.14, 330, 150);           // días 6-8
+    banda(bx(9),  bx(11), ['confianza muy baja'],  26, 0.15, 360, 150);           // días 9-10
+    banda(bx(11), gw1,    ['CIENCIA','FICCIÓN'],    60, 0.17, 520, 210);           // días 11-15
   }
 
   requestAnimationFrame(()=>{
