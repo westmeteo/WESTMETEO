@@ -184,8 +184,8 @@
 
 <nav>
   <div class="navrow">
-    <button class="activa" data-tab="prevision">Previsión</button>
-    <button data-tab="estacion">Estaciones</button>
+    <a class="navlink" href="prevision_proto.html">Previsión</a>
+    <button class="activa" data-tab="estacion">Estaciones</button>
     <button data-tab="partes">Partes</button>
   </div>
   <div class="navrow">
@@ -198,8 +198,7 @@
 <main>
 
   <!-- PREVISION -->
-  <section class="panel activa" id="prevision">
-    <iframe class="prevframe" src="prevision_proto.html" title="Previsión Westmeteo"></iframe>
+  <section class="panel" id="prevision">
     <div id="prevClasica" style="display:none">
     <div class="loctipo">
       <button type="button" class="lt activa" data-tipo="loc">Localidades</button>
@@ -216,7 +215,7 @@
   </section>
 
   <!-- ESTACIONES -->
-  <section class="panel" id="estacion">
+  <section class="panel activa" id="estacion">
     <div class="est-top">
       <h2 id="estNombre">Estaciones</h2>
       <span class="est-live">En directo</span>
