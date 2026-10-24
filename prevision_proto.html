@@ -271,7 +271,7 @@ function drawChart(cid, s, endIdx, fromStart){
   const aEl=(t,a,x)=>{const e=ns(t);for(const k in a)e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;axis.appendChild(e);};
   aEl('text',{x:PADL-4,y:plotT-6,fill:'var(--temp)','font-size':9,'font-weight':800,'text-anchor':'end'},'Temp °C');
   tks(tmin,tmax,4).forEach(v=> aEl('text',{x:PADL-4,y:tY(v)+3,fill:'var(--temp)','font-size':10,'font-weight':700,'text-anchor':'end'},Math.round(v)+'°'));
-  if(VISI.viento) aEl('text',{x:PADL-4,y:plotB+31,fill:'var(--viento)','font-size':9,'font-weight':700,'text-anchor':'end'},'Viento');
+  aEl('text',{x:PADL-4,y:plotB+31,fill:'var(--viento)','font-size':9,'font-weight':700,'text-anchor':'end'},'Viento');
 
   // rejilla vertical + horas + días
   let dAnt='';
@@ -290,7 +290,7 @@ function drawChart(cid, s, endIdx, fromStart){
 
   // viento bajo el plot: UN cuadrito por hora con flecha + velocidad + procedencia (todo en teal)
   const R8=['N','NE','E','SE','S','SW','W','NW'];
-  if(VISI.viento) for(let j=0;j<nH;j++){ const v=D.wind[G(j)], dr=D.dir[G(j)]; if(v==null) continue; const cx=XC(j);
+  for(let j=0;j<nH;j++){ const v=D.wind[G(j)], dr=D.dir[G(j)]; if(v==null) continue; const cx=XC(j);
     svg.appendChild(el('rect',{x:cx-20,y:plotB+2,width:40,height:44,rx:4,fill:'none',stroke:'#2f4b63','stroke-width':1}));
     if(dr!=null) svg.appendChild(el('text',{x:cx,y:plotB+16,fill:'var(--viento)','font-size':14,'font-weight':700,'text-anchor':'middle',transform:`rotate(${dr+180} ${cx} ${plotB+13})`},'↑'));
     svg.appendChild(el('text',{x:cx,y:plotB+31,fill:'var(--viento)','font-size':8.5,'font-weight':800,'text-anchor':'middle'},Math.round(v)+' km/h'));
