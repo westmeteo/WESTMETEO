@@ -369,6 +369,39 @@ function drawChart(cid, s, endIdx, fromStart){
         (isFinite(tmn)?`<span style="color:#8fd0ff;font-size:14px;margin-left:13px">mín ${Math.round(tmn)}°</span>`+
                        `<span style="color:#ff6b6b;font-size:14px;margin-left:7px">máx ${Math.round(tmx)}°</span>`:'');
       sec.appendChild(lbl); dayrow.appendChild(sec); jj+=cnt; } }
+
+  // marca de agua de confianza (solo gráfica 1 del modo detallado = 15 días)
+  if(cid===0 && !GEN){
+    // límites de los "boxes" de día de calendario (box 1 = hoy, parcial)
+    const bj=[0]; { let dk0=D.time[G(0)].getDate()+'-'+D.time[G(0)].getMonth();
+      for(let j=1;j<nH;j++){ const dk=D.time[G(j)].getDate()+'-'+D.time[G(j)].getMonth(); if(dk!==dk0){dk0=dk; bj.push(j);} } }
+    bj.push(nH);
+    const bx=k=>{ const i=k-1; return (i>=0 && i<bj.length)? X(Math.min(nH,bj[i])) : gw1; }; // x al inicio del box k (1-based)
+    const yTop=34, yBot=Hsvg-6, ang=-32, rad=ang*Math.PI/180, cosI=Math.cos(-rad), sinI=Math.sin(-rad);
+    const wm=ns('g'); wm.setAttribute('pointer-events','none'); svg.appendChild(wm);
+    let wmc=0;
+    const banda=(x0,x1,lines,size,op,gapX,gapY)=>{ if(x1-x0<4) return;
+      const clipId='wmc'+cid+'_'+(wmc++);
+      defs.insertAdjacentHTML('beforeend',`<clipPath id="${clipId}"><rect x="${x0.toFixed(1)}" y="${yTop}" width="${(x1-x0).toFixed(1)}" height="${yBot-yTop}"/></clipPath>`);
+      const g=ns('g'); g.setAttribute('clip-path',`url(#${clipId})`); g.setAttribute('opacity',op); wm.appendChild(g);
+      const cx=(x0+x1)/2, cy=(yTop+yBot)/2;
+      const rg=ns('g'); rg.setAttribute('transform',`rotate(${ang} ${cx.toFixed(1)} ${cy.toFixed(1)})`); g.appendChild(rg);
+      // bbox de la banda en coords locales (sin rotar) para repetir sin excesos
+      let lx0=1e9,lx1=-1e9,ly0=1e9,ly1=-1e9;
+      [[x0,yTop],[x1,yTop],[x0,yBot],[x1,yBot]].forEach(([px,py])=>{ const dx=px-cx,dy=py-cy;
+        const lx=cosI*dx-sinI*dy+cx, ly=sinI*dx+cosI*dy+cy;
+        lx0=Math.min(lx0,lx);lx1=Math.max(lx1,lx);ly0=Math.min(ly0,ly);ly1=Math.max(ly1,ly); });
+      const n=lines.length, lh=size*1.05;
+      for(let yy=ly0; yy<=ly1; yy+=gapY){ for(let xx=lx0; xx<=lx1; xx+=gapX){
+        lines.forEach((t,i)=> rg.appendChild(el('text',{x:xx.toFixed(1),y:(yy-(n-1)*lh/2+i*lh+size*0.34).toFixed(1),
+          fill:'#ffffff','font-size':size,'font-weight':900,'text-anchor':'middle','letter-spacing':(size*0.05).toFixed(1),
+          'font-family':'Arial,Helvetica,sans-serif'},t))); } }
+    };
+    banda(bx(6),  bx(8),  ['confianza baja'],      26, 0.14, 330, 150);           // días 6-7
+    banda(bx(8),  bx(10), ['confianza muy baja'],  26, 0.15, 360, 150);           // días 8-9
+    banda(bx(10), gw1,    ['CIENCIA','FICCIÓN'],    60, 0.17, 520, 210);           // día 10 en adelante
+  }
+
   requestAnimationFrame(()=>{
     if(fromStart){ wrap.scrollLeft=0; }
     else { let j8=0; for(let j=0;j<nH;j++){ if(D.time[G(j)].getHours()>=8){j8=j;break;} } wrap.scrollLeft=Math.max(0, X(j8)-6); }
