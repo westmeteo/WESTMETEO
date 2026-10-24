@@ -184,7 +184,7 @@ function drawChart(cid, s, endIdx){
   const grisCover=c=>{const f=Math.max(0,Math.min(1,c/100));const L=Math.round(216-f*154);return `rgb(${L},${L+5},${L+11})`;};
   const alphaCover=c=>{const f=Math.max(0,Math.min(1,c/100));return (Math.pow(f,0.8)*0.92).toFixed(3);};
   const gradF=(id,valAt)=>{let st='',has=false;
-    for(let j=0;j<nH;j++){const c=valAt(j); if(c==null||c<=0)continue; has=true;
+    for(let j=0;j<nH;j++){ let c=valAt(j); if(c==null||c<0)c=0; if(c>0)has=true;   // stop en TODAS las horas (0% = transparente) para que no se rellene donde no hay nube
       st+=`<stop offset="${((j+0.5)/nH).toFixed(4)}" stop-color="${grisCover(c)}" stop-opacity="${alphaCover(c)}"/>`;}
     if(!has)return null;
     defs.insertAdjacentHTML('beforeend',`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${gw0}" y1="0" x2="${gw1}" y2="0">${st}</linearGradient>`);
