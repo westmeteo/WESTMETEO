@@ -6,7 +6,7 @@
 <title>Previsión (prototipo meteograma) · @westmeteo</title>
 <style>
   :root{ --bg:#0f1f30; --panel:#16293d; --line:#33506b; --ink:#eaf2f8; --ink2:#cfe0ee; --mut:#7f9bb3;
-         --azul:#8fd0ff; --temp:#ff9d5c; --viento:#5fe0c0; --lluvia:#4aa3ff; }
+         --azul:#8fd0ff; --temp:#ff9d5c; --viento:#a8d96a; --racha:#4e9a52; --lluvia:#4aa3ff; }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,sans-serif;-webkit-text-size-adjust:100%}
   header{padding:12px 14px 6px}
@@ -51,7 +51,7 @@
 <div class="leg">
   <b><span class="sw" style="background:var(--temp)"></span>Temperatura (°C)</b>
   <b><span class="sw" style="background:var(--viento)"></span>Viento (km/h)</b>
-  <b><span class="sw" style="background:repeating-linear-gradient(90deg,var(--viento) 0 3px,transparent 3px 6px)"></span>Racha</b>
+  <b><span class="sw" style="background:repeating-linear-gradient(90deg,var(--racha) 0 3px,transparent 3px 6px)"></span>Racha</b>
   <b><span class="sw sq" style="background:var(--lluvia);opacity:.6"></span>Lluvia (mm/h)</b>
   <b><span class="sw sq" style="background:linear-gradient(90deg,#d8dee4,#4a535c)"></span>Nubes por altitud (claro→oscuro = %)</b>
 </div>
@@ -207,15 +207,9 @@ function drawChart(cid, s, endIdx, fromStart){
     if(high.length){
       const g=ns('g'); g.setAttribute('filter',`url(#${fid})`); svg.appendChild(g);
       const HI_MIN=30;   // nivel alto por debajo de 30% se descarta
-      const LOW_BR=40;   // umbral de nube baja/media para unirla (puente) con la banda alta
       for(let j=0;j<nH;j++){ let sp=0,sz=0,sf=0,cnt=0;
         for(const l of high){ const c=l.arr[G(j)]; if(c==null||c<HI_MIN) continue; cnt++; sp+=c; sf+=c/100; sz+=(c/100)*l.z; }
         if(!cnt) continue; const mc=sp/cnt, mz=sz/sf; const y=zY(mz);
-        // puente de unión con la nube baja/media relevante (>= umbral) si queda por debajo de la banda alta
-        let zTopLow=null, cLow=0;
-        for(const l of low){ const c=l.arr[G(j)]; if(c!=null && c>=LOW_BR && (zTopLow==null||l.z>zTopLow)){ zTopLow=l.z; cLow=c; } }
-        if(zTopLow!=null && zTopLow<mz){ const op=Math.min(mc,cLow), yA=zY(mz), yB=zY(zTopLow);
-          g.appendChild(el('rect',{x:X(j),y:yA.toFixed(1),width:HOURW,height:(yB-yA).toFixed(1),fill:grisCover(op),opacity:alphaCover(op)})); }
         g.appendChild(el('rect',{x:X(j),y:(y-5).toFixed(1),width:HOURW,height:10,fill:grisCover(mc),opacity:alphaCover(mc)})); }
     }
     [2000,4000,6000,8000,10000].forEach(z=>{ if(z>zBase+300&&z<zTop-200){const y=zY(z);
@@ -230,7 +224,7 @@ function drawChart(cid, s, endIdx, fromStart){
   const aEl=(t,a,x)=>{const e=ns(t);for(const k in a)e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;axis.appendChild(e);};
   aEl('text',{x:PADL-4,y:plotT-6,fill:'var(--temp)','font-size':9,'font-weight':800,'text-anchor':'end'},'Temp °C');
   tks(tmin,tmax,4).forEach(v=> aEl('text',{x:PADL-4,y:tY(v)+3,fill:'var(--temp)','font-size':10,'font-weight':700,'text-anchor':'end'},Math.round(v)+'°'));
-  aEl('text',{x:PADL-4,y:plotB+31,fill:'#5fe0c0','font-size':9,'font-weight':700,'text-anchor':'end'},'Viento');
+  aEl('text',{x:PADL-4,y:plotB+31,fill:'var(--viento)','font-size':9,'font-weight':700,'text-anchor':'end'},'Viento');
 
   // rejilla vertical + horas + días
   let dAnt='';
@@ -259,17 +253,17 @@ function drawChart(cid, s, endIdx, fromStart){
   const R8=['N','NE','E','SE','S','SW','W','NW'];
   for(let j=0;j<nH;j++){ const v=D.wind[G(j)], dr=D.dir[G(j)]; if(v==null) continue; const cx=XC(j);
     svg.appendChild(el('rect',{x:cx-20,y:plotB+2,width:40,height:44,rx:4,fill:'none',stroke:'#2f4b63','stroke-width':1}));
-    if(dr!=null) svg.appendChild(el('text',{x:cx,y:plotB+16,fill:'#5fe0c0','font-size':14,'font-weight':700,'text-anchor':'middle',transform:`rotate(${dr+180} ${cx} ${plotB+13})`},'↑'));
-    svg.appendChild(el('text',{x:cx,y:plotB+31,fill:'#5fe0c0','font-size':8.5,'font-weight':800,'text-anchor':'middle'},Math.round(v)+' km/h'));
-    if(dr!=null) svg.appendChild(el('text',{x:cx,y:plotB+42,fill:'#5fe0c0','font-size':9,'font-weight':700,'text-anchor':'middle'},R8[Math.round(dr/45)%8]));
+    if(dr!=null) svg.appendChild(el('text',{x:cx,y:plotB+16,fill:'var(--viento)','font-size':14,'font-weight':700,'text-anchor':'middle',transform:`rotate(${dr+180} ${cx} ${plotB+13})`},'↑'));
+    svg.appendChild(el('text',{x:cx,y:plotB+31,fill:'var(--viento)','font-size':8.5,'font-weight':800,'text-anchor':'middle'},Math.round(v)+' km/h'));
+    if(dr!=null) svg.appendChild(el('text',{x:cx,y:plotB+42,fill:'var(--viento)','font-size':9,'font-weight':700,'text-anchor':'middle'},R8[Math.round(dr/45)%8]));
   }
 
   // líneas de viento (+racha) y temperatura
   const pw=f=>{let sp='';for(let j=0;j<nH;j++){const v=D[f][G(j)];if(v==null)continue;sp+=(sp?'L':'M')+XC(j)+' '+wY(v).toFixed(1)+' ';}return sp;};
-  svg.appendChild(el('path',{d:pw('gust'),fill:'none',stroke:'var(--viento)','stroke-width':1,'stroke-dasharray':'3 3',opacity:.5}));
+  svg.appendChild(el('path',{d:pw('gust'),fill:'none',stroke:'var(--racha)','stroke-width':1,'stroke-dasharray':'3 3',opacity:.6}));
   svg.appendChild(el('path',{d:pw('wind'),fill:'none',stroke:'var(--viento)','stroke-width':2}));
   for(let j=0;j<nH;j+=3){ const g=D.gust[G(j)]; if(g==null)continue;   // etiquetas de racha sobre la línea, como la temperatura
-    svg.appendChild(el('text',{x:XC(j),y:wY(g)-5,fill:'#7fd9c8','font-size':9,'font-weight':700,'text-anchor':'middle'},Math.round(g)+' km/h')); }
+    svg.appendChild(el('text',{x:XC(j),y:wY(g)-5,fill:'var(--racha)','font-size':9,'font-weight':700,'text-anchor':'middle'},Math.round(g)+' km/h')); }
   let sp='';for(let j=0;j<nH;j++){const v=D.temp[G(j)];if(v==null)continue;sp+=(sp?'L':'M')+XC(j)+' '+tY(v).toFixed(1)+' ';}
   svg.appendChild(el('path',{d:sp,fill:'none',stroke:'var(--temp)','stroke-width':2.4}));
   for(let j=0;j<nH;j+=3){const v=D.temp[G(j)];if(v==null)continue;svg.appendChild(el('text',{x:XC(j),y:tY(v)-7,fill:'#ffb784','font-size':10,'font-weight':700,'text-anchor':'middle'},Math.round(v)+'°'));}
