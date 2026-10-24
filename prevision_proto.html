@@ -140,13 +140,13 @@ function pintarTodo(){
   for(let i=0;i<DATA.time.length-1;i++){ if(DATA.time[i]<=now && now<DATA.time[i+1]){ nowIdx=i; break; } }
   const end7=Math.min(DATA.time.length, 7*24);
   const end15=Math.min(DATA.time.length, 15*24);
-  drawChart(0, nowIdx, end15);                              // 1ª gráfica: desde AHORA (TEMPORAL a 15 días)
-  for(let k=1; k*24 < end7; k++) drawChart(k, k*24, end7);  // resto: desde las 00:00 del día k, hasta el día 7
+  drawChart(0, nowIdx, end15, true);                        // 1ª gráfica: desde AHORA (scroll al inicio)
+  for(let k=1; k*24 < end7; k++) drawChart(k, k*24, end7, false);  // resto: desde las 00:00 del día k, hasta el día 7
   setFuente();
 }
 
 /* ===== una gráfica (ventana de 7 días desde el índice s) ===== */
-function drawChart(cid, s, endIdx){
+function drawChart(cid, s, endIdx, fromStart){
   const D=DATA, N=D.time.length, nH=endIdx - s;
   if(nH<6) return;
   const box=document.createElement('div'); box.className='mg-box';
@@ -273,9 +273,11 @@ function drawChart(cid, s, endIdx){
     svg.appendChild(el('line',{x1:xn,y1:plotT-6,x2:xn,y2:plotB,stroke:'#ffd166','stroke-width':1.5,opacity:.9}));
     svg.appendChild(el('text',{x:xn+3,y:plotT+2,fill:'#ffd166','font-size':9,'font-weight':700},'ahora')); break; } }
 
-  // scroll inicial a las 06:00 de la ventana
-  let j6=0; for(let j=0;j<nH;j++){ if(D.time[G(j)].getHours()>=6){j6=j;break;} }
-  requestAnimationFrame(()=>{ wrap.scrollLeft=Math.max(0, X(j6)-6); });
+  // scroll inicial: la 1ª gráfica desde el inicio (ahora); las demás saltan a las 06:00
+  requestAnimationFrame(()=>{
+    if(fromStart){ wrap.scrollLeft=0; }
+    else { let j6=0; for(let j=0;j<nH;j++){ if(D.time[G(j)].getHours()>=6){j6=j;break;} } wrap.scrollLeft=Math.max(0, X(j6)-6); }
+  });
 
   // tooltip (toca una hora)
   svg.addEventListener('click', e=>{ const r=svg.getBoundingClientRect(); const j=Math.floor((e.clientX-r.left-PADL)/HOURW);
