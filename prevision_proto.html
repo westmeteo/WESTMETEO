@@ -27,10 +27,12 @@
   .mg-wrap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
            border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(#0c1a28,#0f1f30)}
   .mg-wrap svg{display:block}
+  .mg-content{position:relative}
   .axis{position:absolute;left:0;top:1px;pointer-events:none;background:linear-gradient(#0c1a28,#0f1f30);border-right:1px solid rgba(58,86,112,.35)}
   .kmaxis{position:absolute;left:50%;top:1px;transform:translateX(-50%);pointer-events:none}
-  .daystick{position:absolute;top:2px;pointer-events:none;white-space:nowrap;font:800 17px system-ui,sans-serif;
-            color:#eaf2f8;text-shadow:0 1px 2px #0c1a28;will-change:transform}
+  .dayrow{position:absolute;top:2px;left:0;height:24px;display:flex;pointer-events:none}
+  .daysec{position:relative;height:24px;flex:0 0 auto}
+  .daylbl{position:sticky;left:56px;width:max-content;white-space:nowrap;font:800 17px system-ui,sans-serif;color:#eaf2f8;text-shadow:0 1px 2px #0c1a28}
   .hint{color:var(--mut);font-size:11px;padding:8px 14px;text-align:center}
   #tip{position:fixed;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(10,20,32,.97);
        border:1px solid var(--azul);border-radius:12px;padding:14px 16px 12px;font-size:13px;color:var(--ink);
@@ -162,12 +164,13 @@ function drawChart(cid, s, endIdx, fromStart){
   const box=document.createElement('div'); box.className='mg-box';
   const posic=document.createElement('div'); posic.className='mg-posic';
   const wrap=document.createElement('div'); wrap.className='mg-wrap';
-  const svg=ns('svg'); wrap.appendChild(svg);
+  const content=document.createElement('div'); content.className='mg-content';
+  const svg=ns('svg'); content.appendChild(svg);
   const axis=ns('svg'); axis.setAttribute('class','axis');
   const kmov=ns('svg'); kmov.setAttribute('class','kmaxis'); kmov.setAttribute('width',40); kmov.setAttribute('height',Hsvg); kmov.setAttribute('viewBox',`0 0 40 ${Hsvg}`);
-  const stick=document.createElement('div'); stick.className='daystick'; stick.style.left=PADL+'px';
-  const dayHdr={};
-  posic.appendChild(wrap); posic.appendChild(stick); posic.appendChild(axis); posic.appendChild(kmov);
+  const dayrow=document.createElement('div'); dayrow.className='dayrow'; content.appendChild(dayrow);
+  wrap.appendChild(content);
+  posic.appendChild(wrap); posic.appendChild(axis); posic.appendChild(kmov);
   box.appendChild(posic);
   document.getElementById('charts').appendChild(box);
 
@@ -240,14 +243,7 @@ function drawChart(cid, s, endIdx, fromStart){
   // rejilla vertical + horas + días
   let dAnt='';
   for(let j=0;j<nH;j++){ const g=G(j), d=D.time[g], hr=d.getHours(), dk=d.getDate()+'-'+d.getMonth();
-    if(dk!==dAnt){ dAnt=dk;
-      svg.appendChild(el('line',{x1:X(j),y1:42,x2:X(j),y2:plotB,stroke:'#49708f','stroke-width':1.2}));
-      let tot=0,tmn=Infinity,tmx=-Infinity;
-      for(let k=j;k<nH&&(D.time[G(k)].getDate()+'-'+D.time[G(k)].getMonth())===dk;k++){ tot+=PC[k]||0; const tv=D.temp[G(k)]; if(tv!=null){ if(tv<tmn)tmn=tv; if(tv>tmx)tmx=tv; } }
-      dayHdr[dk]=`${DIAS[d.getDay()]} ${d.getDate()} ${capMes(d.getMonth())} `+
-        `<span style="color:#7fc0ff;font-size:12px;font-weight:700">(${tot.toFixed(1)}mm)</span>`+
-        (isFinite(tmn)?`<span style="color:#8fd0ff;font-size:14px;margin-left:13px">mín ${Math.round(tmn)}°</span>`+
-                       `<span style="color:#ff6b6b;font-size:14px;margin-left:7px">máx ${Math.round(tmx)}°</span>`:'');
+    if(dk!==dAnt){ dAnt=dk; svg.appendChild(el('line',{x1:X(j),y1:42,x2:X(j),y2:plotB,stroke:'#49708f','stroke-width':1.2}));
     }else svg.appendChild(el('line',{x1:X(j),y1:plotT,x2:X(j),y2:plotB,stroke:'#22384c','stroke-width':1}));
     svg.appendChild(el('text',{x:XC(j),y:52,fill:'#9ab2c8','font-size':9,'text-anchor':'middle'},String(hr).padStart(2,'0')+'h'));
   }
@@ -292,20 +288,24 @@ function drawChart(cid, s, endIdx, fromStart){
     svg.appendChild(el('line',{x1:xn,y1:plotT-6,x2:xn,y2:plotB,stroke:'#ffd166','stroke-width':1,'stroke-dasharray':'2 5',opacity:.45}));
     svg.appendChild(el('text',{x:xn+3,y:plotT+2,fill:'#ffd166','font-size':9,'font-weight':700},'ahora')); break; } }
 
-  // cabecera de día PEGAJOSA (se queda fija y la empuja el día siguiente) + scroll inicial
-  function updateStick(){
-    const s=wrap.scrollLeft, jRef=Math.max(0, Math.min(nH-1, Math.ceil(s/HOURW)));
-    const d0=D.time[G(jRef)], dk0=d0.getDate()+'-'+d0.getMonth();
-    stick.innerHTML=dayHdr[dk0]||'';
-    let jN=nH; for(let j=jRef+1;j<nH;j++){ const dd=D.time[G(j)]; if(dd.getDate()+'-'+dd.getMonth()!==dk0){ jN=j; break; } }
-    const gap=(X(jN)-s)-PADL, w=stick.offsetWidth||160;
-    stick.style.transform='translateX('+Math.min(0, gap-w).toFixed(0)+'px)';
-  }
-  wrap.addEventListener('scroll', updateStick, {passive:true});
+  // cabecera de día pegajosa NATIVA: una sección por día; la etiqueta sticky se queda fija y la empuja la del día siguiente
+  dayrow.style.width=W+'px'; content.style.width=W+'px';
+  { const sp0=document.createElement('div'); sp0.style.cssText='flex:0 0 auto;width:'+PADL+'px'; dayrow.appendChild(sp0);
+    let jj=0;
+    while(jj<nH){ const d=D.time[G(jj)], dk=d.getDate()+'-'+d.getMonth();
+      let cnt=0,tot=0,tmn=Infinity,tmx=-Infinity;
+      while(jj+cnt<nH && (D.time[G(jj+cnt)].getDate()+'-'+D.time[G(jj+cnt)].getMonth())===dk){
+        tot+=PC[jj+cnt]||0; const tv=D.temp[G(jj+cnt)]; if(tv!=null){if(tv<tmn)tmn=tv;if(tv>tmx)tmx=tv;} cnt++; }
+      const sec=document.createElement('div'); sec.className='daysec'; sec.style.width=(cnt*HOURW)+'px';
+      const lbl=document.createElement('div'); lbl.className='daylbl';
+      lbl.innerHTML=`${DIAS[d.getDay()]} ${d.getDate()} ${capMes(d.getMonth())} `+
+        `<span style="color:#7fc0ff;font-size:12px;font-weight:700">(${tot.toFixed(1)}mm)</span>`+
+        (isFinite(tmn)?`<span style="color:#8fd0ff;font-size:14px;margin-left:13px">mín ${Math.round(tmn)}°</span>`+
+                       `<span style="color:#ff6b6b;font-size:14px;margin-left:7px">máx ${Math.round(tmx)}°</span>`:'');
+      sec.appendChild(lbl); dayrow.appendChild(sec); jj+=cnt; } }
   requestAnimationFrame(()=>{
     if(fromStart){ wrap.scrollLeft=0; }
     else { let j8=0; for(let j=0;j<nH;j++){ if(D.time[G(j)].getHours()>=8){j8=j;break;} } wrap.scrollLeft=Math.max(0, X(j8)-6); }
-    updateStick();
   });
 
   // tooltip (toca una hora)
