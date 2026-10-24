@@ -16,7 +16,7 @@
   .fuente{color:var(--mut);font-size:11px;margin:1px 0 0}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:0 14px 8px}
   select{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit}
-  .leg{display:grid;grid-template-columns:repeat(3,max-content);gap:8px 14px;justify-content:center;font-size:11px;color:var(--ink2);padding:2px 14px 8px}
+  .leg{display:grid;grid-template-columns:repeat(3,max-content);gap:8px 14px;justify-content:center;font-size:11px;color:var(--ink2);padding:2px 14px 4px}
   .leg b{display:inline-flex;align-items:center;gap:6px;font-weight:600;cursor:pointer;user-select:none;transition:.15s;
          border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:999px;padding:4px 10px}
   .leg b.off{opacity:.45;background:none;border-color:#2a3f54}
@@ -26,7 +26,8 @@
   .mode.on{background:#2980b9;color:#fff;border-color:#2980b9}
   .sw{width:16px;height:4px;border-radius:2px;display:inline-block}
   .sw.sq{height:11px;width:11px;border-radius:2px}
-  #charts .mg-box{margin-top:16px}
+  #charts .mg-box{margin-top:14px}
+  #charts .mg-box:first-child{margin-top:0}
   .cap{color:#9fb6c8;font-size:12px;font-weight:800;padding:2px 14px 4px}
   .mg-posic{position:relative}
   .mg-wrap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
@@ -35,7 +36,7 @@
   .mg-content{position:relative}
   .axis{position:absolute;left:0;top:1px;pointer-events:none;background:linear-gradient(#0c1a28,#0f1f30);border-right:1px solid rgba(58,86,112,.35)}
   .kmaxis{position:absolute;left:50%;top:1px;transform:translateX(-50%);pointer-events:none}
-  .dayrow{position:absolute;top:2px;left:0;height:24px;display:flex;pointer-events:none}
+  .dayrow{position:absolute;top:7px;left:0;height:26px;display:flex;pointer-events:none}
   .daysec{position:relative;height:24px;flex:0 0 auto}
   .daylbl{position:sticky;left:56px;width:max-content;white-space:nowrap;font:800 17px system-ui,sans-serif;color:#eaf2f8;text-shadow:0 1px 2px #0c1a28}
   .hint{color:var(--mut);font-size:11px;padding:8px 14px;text-align:center}
