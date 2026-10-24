@@ -105,7 +105,7 @@ async function cargar(){
   try{
     [A,E]=await Promise.all([
       fetch(u('meteofrance_arome_france_hd',3)).then(r=>r.json()).catch(()=>null),   // AROME: mientras cubra
-      fetch(u('ecmwf_ifs025',7,extraCloud)).then(r=>r.json()),                      // ECMWF: 7 días + perfil de nubes
+      fetch(u('ecmwf_ifs025',15,extraCloud)).then(r=>r.json()),                      // ECMWF: 15 días (temporal) + perfil de nubes
     ]);
   }catch(e){ document.getElementById('fuente').innerHTML='<span class="warn">No se pudo cargar la previsión.</span>'; return; }
   const EH=E.hourly, AH=(A&&A.hourly)||{time:[]};
@@ -136,8 +136,10 @@ function setFuente(){
 function pintarTodo(){
   const host=document.getElementById('charts'); host.innerHTML='';
   if(!DATA){ return; }
-  const endIdx=Math.min(DATA.time.length, 7*24);           // solo los 7 primeros días
-  for(let k=0; k*24 < endIdx; k++) drawChart(k, k*24, endIdx);   // cada gráfica empieza un día después y todas acaban en el día 7
+  const end7=Math.min(DATA.time.length, 7*24);
+  const end15=Math.min(DATA.time.length, 15*24);
+  drawChart(0, 0, end15);                                   // TEMPORAL: primera gráfica a 15 días (para inspeccionar condiciones)
+  for(let k=1; k*24 < end7; k++) drawChart(k, k*24, end7);  // resto: escalera hasta el día 7
   setFuente();
 }
 
