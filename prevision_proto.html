@@ -30,9 +30,11 @@
   .kmaxis{position:absolute;left:50%;top:1px;transform:translateX(-50%);pointer-events:none}
   .hint{color:var(--mut);font-size:11px;padding:8px 14px;text-align:center}
   #tip{position:fixed;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(10,20,32,.97);
-       border:1px solid var(--azul);border-radius:12px;padding:12px 15px;font-size:13px;color:var(--ink);
-       pointer-events:none;display:none;min-width:200px;box-shadow:0 12px 34px rgba(0,0,0,.6)}
-  #tip h4{margin:0 0 7px;font-size:12px;color:var(--azul)}
+       border:1px solid var(--azul);border-radius:12px;padding:14px 16px 12px;font-size:13px;color:var(--ink);
+       pointer-events:auto;display:none;min-width:210px;box-shadow:0 12px 34px rgba(0,0,0,.6)}
+  #tip h4{margin:0 10px 7px 0;font-size:12px;color:var(--azul)}
+  #tip .tipx{position:absolute;top:5px;right:9px;color:#9fb6c8;font-size:16px;font-weight:800;cursor:pointer;line-height:1}
+  #tip .tipx:hover{color:#fff}
   #tip .r{display:flex;justify-content:space-between;gap:12px}
   #tip .k{color:var(--mut)}
   footer{color:var(--mut);font-size:11px;padding:10px 14px 24px}
@@ -316,7 +318,7 @@ function mostrar(i){
   const rumbo= dr==null?'–':RUMBOS[Math.round(dr/22.5)%16];
   const prC=precipCorr(DATA.praw[i]||0, dr, DATA.src?DATA.src[i]:'E');
   const nub=nubesTexto(DATA.ch?.[i], DATA.cm?.[i], DATA.cl?.[i], DATA.ctot?.[i]);
-  tip.innerHTML=`<h4>${DIAS[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()]} · ${String(d.getHours()).padStart(2,'0')}:00</h4>`+
+  tip.innerHTML=`<span class="tipx">✕</span><h4>${DIAS[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()]} · ${String(d.getHours()).padStart(2,'0')}:00</h4>`+
     `<div class="r"><span class="k">Temp</span><b>${DATA.temp[i]!=null?Math.round(DATA.temp[i])+'°':'–'}</b></div>`+
     `<div class="r"><span class="k">Lluvia</span><b>${prC>0?prC.toFixed(1)+' mm':'0'}</b></div>`+
     `<div class="r"><span class="k">Viento</span><b>${DATA.wind[i]!=null?Math.round(DATA.wind[i]):'–'} ${rumbo}${DATA.gust[i]>DATA.wind[i]+10?' ('+Math.round(DATA.gust[i])+')':''}</b></div>`+
@@ -324,7 +326,8 @@ function mostrar(i){
     `<div class="r"><span class="k">Modelo</span><b>${DATA.src&&DATA.src[i]==='A'?'AROME':'ECMWF'} + WM1.0</b></div>`;
   tip.style.display='block';
 }
-document.addEventListener('click', e=>{ if(!e.target.closest('.mg-wrap')) tip.style.display='none'; });
+document.addEventListener('click', e=>{ if(!e.target.closest('.mg-wrap') && !e.target.closest('#tip')) tip.style.display='none'; });
+tip.addEventListener('click', e=>{ if(e.target.closest('.tipx')) tip.style.display='none'; });
 
 sel.addEventListener('change', cargar);
 document.querySelectorAll('.leg b[data-k]').forEach(b=>{ const k=b.dataset.k;
