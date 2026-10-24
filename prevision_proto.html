@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Previsión (prototipo meteograma) · @westmeteo</title>
+<style>
+  :root{ --bg:#0f1f30; --panel:#16293d; --line:#33506b; --ink:#eaf2f8; --ink2:#cfe0ee; --mut:#7f9bb3;
+         --azul:#8fd0ff; --temp:#ff9d5c; --viento:#5fe0c0; --lluvia:#4aa3ff; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,sans-serif;-webkit-text-size-adjust:100%}
+  header{padding:12px 14px 6px}
+  h1{font-size:17px;margin:0 0 2px} .sub{color:var(--azul);font-size:12px}
+  .beta{background:#b4532a;color:#fff;font-size:10px;font-weight:800;border-radius:4px;padding:1px 5px;vertical-align:middle;margin-left:6px}
+  .fuente{color:var(--mut);font-size:11px;margin:4px 0 0}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:0 14px 8px}
+  select{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit}
+  .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink2);padding:0 14px 8px}
+  .leg b{display:inline-flex;align-items:center;gap:5px;font-weight:600}
+  .sw{width:16px;height:4px;border-radius:2px;display:inline-block}
+  .sw.sq{height:11px;width:11px;border-radius:2px}
+  /* contenedor con scroll horizontal al dedo */
+  .mg-wrap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+           border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(#0c1a28,#0f1f30)}
+  .mg-wrap svg{display:block}
+  .hint{color:var(--mut);font-size:11px;padding:6px 14px;text-align:center}
+  #tip{position:fixed;z-index:30;background:rgba(10,20,32,.96);border:1px solid var(--azul);border-radius:10px;
+       padding:8px 10px;font-size:12px;color:var(--ink);pointer-events:none;display:none;min-width:150px;
+       box-shadow:0 6px 18px rgba(0,0,0,.5)}
+  #tip h4{margin:0 0 5px;font-size:12px;color:var(--azul)}
+  #tip .r{display:flex;justify-content:space-between;gap:12px}
+  #tip .k{color:var(--mut)}
+  footer{color:var(--mut);font-size:11px;padding:10px 14px 24px}
+  .warn{color:#e0994a}
+</style>
+</head>
+<body data-palette="#ff9d5c,#5fe0c0,#4aa3ff,#8fd0ff">
+<header>
+  <h1>Previsión <span class="beta">PROTOTIPO</span></h1>
+  <div class="sub">Meteograma · <b>AROME</b> mientras cubre + <b>ECMWF</b> hasta 7 días × <b>WM0.2</b></div>
+  <p class="fuente" id="fuente">Cargando…</p>
+</header>
+<div class="row">
+  <label for="sel" style="color:var(--ink2);font-size:12px">Lugar</label>
+  <select id="sel"></select>
+</div>
+<div class="leg">
+  <b><span class="sw" style="background:var(--temp)"></span>Temperatura (°C)</b>
+  <b><span class="sw" style="background:var(--viento)"></span>Viento (km/h)</b>
+  <b><span class="sw sq" style="background:var(--lluvia);opacity:.6"></span>Lluvia (mm/h)</b>
+  <b><span class="sw sq" style="background:#9fb8d0;opacity:.5"></span>Nubes A/M/B (%)</b>
+</div>
+<div class="mg-wrap" id="wrap"><svg id="svg"></svg></div>
+<div class="hint">Desliza con el dedo ← → · toca para ver los datos de una hora</div>
+<div id="tip"></div>
+<footer id="foot"></footer>
+
+<script>
+/* ===== config ===== */
+const LUGARES = [
+  {id:'bejar',  n:'Béjar',               lat:40.3852, lon:-5.7645},
+  {id:'candelario', n:'Candelario',      lat:40.3700, lon:-5.7450},
+  {id:'hoyos',  n:'Hoyos del Espino',    lat:40.3470, lon:-5.1750},
+  {id:'navarredonda', n:'Navarredonda',  lat:40.3400, lon:-5.1300},
+];
+// WM0.2: sesgos del modelo medidos contra la estación (oct-2026). PROVISIONAL y configurable.
+// Factor de lluvia por modelo (AROME infravaloró x3.1, ECMWF x3.8 en oct-26).
+const WM02 = { precipArome: 3.0, precipEcmwf: 3.8, tempOffset: 0.0, windFactor: 1.0 };
+
+const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const RUMBOS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+
+/* ===== geometría ===== */
+const HOURW=46, PADL=30, PADR=20, TOP=54, BOT=46, Hsvg=340;
+const plotT=TOP, plotB=Hsvg-BOT, plotH=plotB-plotT;
+
+const svg=document.getElementById('svg'), wrap=document.getElementById('wrap'), tip=document.getElementById('tip');
+const sel=document.getElementById('sel');
+LUGARES.forEach(l=>{const o=document.createElement('option');o.value=l.id;o.textContent=l.n;sel.appendChild(o);});
+
+let DATA=null;   // {time, temp, precip, cl, cm, ch, ctot, wind, gust, dir}
+
+function ns(t){return document.createElementNS('http://www.w3.org/2000/svg',t);}
+function el(t,a,txt){const e=ns(t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;}
+
+async function cargar(){
+  const l=LUGARES.find(x=>x.id===sel.value)||LUGARES[0];
+  document.getElementById('fuente').textContent='Cargando AROME + ECMWF…';
+  const vars='temperature_2m,precipitation,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,'+
+             'wind_speed_10m,wind_gusts_10m,wind_direction_10m';
+  const u=(m,days)=>`https://api.open-meteo.com/v1/forecast?latitude=${l.lat}&longitude=${l.lon}`+
+    `&hourly=${vars}&models=${m}&timezone=Europe%2FMadrid&windspeed_unit=kmh&forecast_days=${days}`;
+  let A,E;
+  try{
+    [A,E]=await Promise.all([
+      fetch(u('meteofrance_arome_france_hd',3)).then(r=>r.json()).catch(()=>null),  // AROME: mientras cubra
+      fetch(u('ecmwf_ifs025',7)).then(r=>r.json()),                                 // ECMWF: el resto, 7 días
+    ]);
+  }catch(e){ document.getElementById('fuente').innerHTML='<span class="warn">No se pudo cargar la previsión.</span>'; return; }
+  const EH=E.hourly, AH=(A&&A.hourly)||{time:[]};
+  const aIdx={}; (AH.time||[]).forEach((t,k)=>aIdx[t]=k);
+  const N=EH.time.length, src=new Array(N);
+  // AROME manda en cada hora que cubra (temperatura no nula); si no, ECMWF
+  for(let i=0;i<N;i++){ const ak=aIdx[EH.time[i]]; const aT=(ak!=null&&AH.temperature_2m)?AH.temperature_2m[ak]:null; src[i]=(aT!=null)?'A':'E'; }
+  const mix=f=> EH.time.map((t,i)=>{ const ak=aIdx[t]; return (src[i]==='A'&&AH[f])?AH[f][ak]:EH[f][i]; });
+  const prRaw=mix('precipitation');
+  DATA={
+    time:EH.time.map(t=>new Date(t)),
+    temp:mix('temperature_2m').map(v=> v==null?null:v+WM02.tempOffset),
+    praw:prRaw.map(v=> v==null?0:v),
+    precip:prRaw.map((v,i)=> v==null?0: v*(src[i]==='A'?WM02.precipArome:WM02.precipEcmwf)),
+    cl:mix('cloud_cover_low'), cm:mix('cloud_cover_mid'), ch:mix('cloud_cover_high'), ctot:mix('cloud_cover'),
+    wind:mix('wind_speed_10m').map(v=> v==null?null:v*WM02.windFactor),
+    gust:mix('wind_gusts_10m').map(v=> v==null?null:v*WM02.windFactor),
+    dir:mix('wind_direction_10m'), src,
+  };
+  render();
+  const nA=src.filter(s=>s==='A').length;
+  document.getElementById('fuente').innerHTML=`<b>${l.n}</b> · AROME las primeras ${nA} h, luego ECMWF hasta 7 días · WM0.2 lluvia ×${WM02.precipArome}/${WM02.precipEcmwf}`;
+}
+
+function render(){
+  const D=DATA, N=D.time.length;
+  const W=PADL+PADR+N*HOURW;
+  svg.setAttribute('width',W); svg.setAttribute('height',Hsvg); svg.setAttribute('viewBox',`0 0 ${W} ${Hsvg}`);
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+  const X=i=> PADL + i*HOURW;            // borde izq de la columna de la hora i
+  const XC=i=> X(i)+HOURW/2;             // centro
+
+  // escalas
+  const temps=D.temp.filter(v=>v!=null);
+  let tmin=Math.min(...temps), tmax=Math.max(...temps); if(tmin===tmax){tmin-=1;tmax+=1;}
+  tmin=Math.floor(tmin-1); tmax=Math.ceil(tmax+1);
+  const tY=t=> plotB - (t-tmin)/(tmax-tmin)*(plotH-16) - 8;
+  const wmax=Math.max(25, ...D.wind.filter(v=>v!=null), ...D.gust.filter(v=>v!=null));
+  const wY=w=> plotB - (w/wmax)*(plotH*0.55) - 6;
+  const rmax=Math.max(3, ...D.precip);
+  const rPx=plotH*0.42;
+
+  // --- fondo: nubes por alturas (3 bandas: A arriba, M medio, B abajo) ---
+  const bandH=plotH/3, cloudCol='#9fb8d0';
+  const anyLevels = D.cl && D.cl.some(v=>v!=null);
+  for(let i=0;i<N;i++){
+    const hasLev = D.cl && (D.cl[i]!=null||D.cm[i]!=null||D.ch[i]!=null);
+    if(hasLev){     // AROME (y ECMWF si trae niveles): 3 bandas por altura
+      const levs=[[D.ch[i],plotT],[D.cm[i],plotT+bandH],[D.cl[i],plotT+2*bandH]];
+      levs.forEach(([c,y])=>{ if(c==null)return; const op=Math.max(0,Math.min(1,c/100))*0.5;
+        if(op>0.02) svg.appendChild(el('rect',{x:X(i),y:y,width:HOURW,height:bandH,fill:cloudCol,opacity:op.toFixed(3)})); });
+    }else if(D.ctot && D.ctot[i]!=null){   // ECMWF sin niveles: una banda con la nubosidad total
+      const op=D.ctot[i]/100*0.45; if(op>0.02) svg.appendChild(el('rect',{x:X(i),y:plotT,width:HOURW,height:plotH,fill:cloudCol,opacity:op.toFixed(3)}));
+    }
+  }
+  // etiquetas A/M/B del fondo de nubes
+  if(anyLevels)['A','M','B'].forEach((L,k)=> svg.appendChild(el('text',{x:3,y:plotT+bandH*k+bandH/2+4,fill:'#6c8aa6','font-size':10,'font-weight':700},L)));
+
+  // --- rejilla vertical + etiquetas de hora + separadores de día ---
+  let dAnt='';
+  for(let i=0;i<N;i++){
+    const d=D.time[i], hr=d.getHours();
+    const dk=d.getDate()+'-'+d.getMonth();
+    const esDia = dk!==dAnt;
+    if(esDia){ dAnt=dk;
+      svg.appendChild(el('line',{x1:X(i),y1:plotT-TOP+8,x2:X(i),y2:plotB,stroke:'#49708f','stroke-width':1}));
+      // cabecera de día + total de lluvia (corregido)
+      let tot=0; for(let k=i;k<N && (D.time[k].getDate()+'-'+D.time[k].getMonth())===dk;k++) tot+=D.precip[k]||0;
+      const etq=`${DIAS[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()]}`;
+      svg.appendChild(el('text',{x:X(i)+6,y:16,fill:'#eaf2f8','font-size':12,'font-weight':800},etq));
+      const ll = tot>=0.5 ? `${tot.toFixed(tot<10?1:0)} mm` : 'seco';
+      svg.appendChild(el('text',{x:X(i)+6,y:31,fill:tot>=0.5?'#7fc0ff':'#6c8aa6','font-size':11,'font-weight':700},(tot>=0.5?'🌧 ':'· ')+ll));
+    }else{
+      svg.appendChild(el('line',{x1:X(i),y1:plotT,x2:X(i),y2:plotB,stroke:'#22384c','stroke-width':1}));
+    }
+    svg.appendChild(el('text',{x:XC(i),y:Hsvg-28,fill:'#9ab2c8','font-size':10,'text-anchor':'middle'},String(hr).padStart(2,'0')));
+  }
+  // base
+  svg.appendChild(el('line',{x1:PADL,y1:plotB,x2:W-PADR,y2:plotB,stroke:'#49708f','stroke-width':1}));
+
+  // --- lluvia (barras) ---
+  for(let i=0;i<N;i++){ const p=D.precip[i]||0; if(p<=0) continue;
+    const h=Math.max(1.5,(p/rmax)*rPx);
+    svg.appendChild(el('rect',{x:X(i)+6,y:plotB-h,width:HOURW-12,height:h,rx:2,fill:'var(--lluvia)',opacity:.55}));
+  }
+
+  // --- flechas de dirección de viento (franja superior) ---
+  for(let i=0;i<N;i+=2){ const dr=D.dir[i]; if(dr==null)continue;
+    svg.appendChild(el('text',{x:XC(i),y:46,fill:'#5fe0c0','font-size':12,'text-anchor':'middle',
+      transform:`rotate(${dr+180} ${XC(i)} 42)`},'↑'));
+  }
+
+  // --- línea de viento (+ racha discontinua) ---
+  const pathW=(arr)=>{let s='';for(let i=0;i<N;i++){if(arr[i]==null)continue;s+=(s?'L':'M')+XC(i)+' '+wY(arr[i]).toFixed(1)+' ';}return s;};
+  svg.appendChild(el('path',{d:pathW(D.gust),fill:'none',stroke:'var(--viento)','stroke-width':1,'stroke-dasharray':'3 3',opacity:.5}));
+  svg.appendChild(el('path',{d:pathW(D.wind),fill:'none',stroke:'var(--viento)','stroke-width':2}));
+
+  // --- línea de temperatura (+ etiquetas cada 3 h) ---
+  let sp='';for(let i=0;i<N;i++){if(D.temp[i]==null)continue;sp+=(sp?'L':'M')+XC(i)+' '+tY(D.temp[i]).toFixed(1)+' ';}
+  svg.appendChild(el('path',{d:sp,fill:'none',stroke:'var(--temp)','stroke-width':2.4}));
+  for(let i=0;i<N;i+=3){ if(D.temp[i]==null)continue;
+    svg.appendChild(el('text',{x:XC(i),y:tY(D.temp[i])-7,fill:'#ffb784','font-size':10,'font-weight':700,'text-anchor':'middle'},Math.round(D.temp[i])+'°'));
+  }
+
+  // --- "ahora" ---
+  const now=new Date();
+  for(let i=0;i<N-1;i++){ if(D.time[i]<=now && now<D.time[i+1]){
+    const xn=XC(i)+(now-D.time[i])/3600000*HOURW;
+    svg.appendChild(el('line',{x1:xn,y1:plotT-6,x2:xn,y2:plotB,stroke:'#ffd166','stroke-width':1.5,opacity:.9}));
+    svg.appendChild(el('text',{x:xn+3,y:plotT+2,fill:'#ffd166','font-size':9,'font-weight':700},'ahora')); break; }}
+
+  // --- transición AROME -> ECMWF ---
+  const it=D.src ? D.src.indexOf('E') : -1;
+  if(it>0){
+    svg.appendChild(el('line',{x1:X(it),y1:8,x2:X(it),y2:plotB,stroke:'#9b8cff','stroke-width':1.5,'stroke-dasharray':'4 3',opacity:.85}));
+    svg.appendChild(el('text',{x:X(it)-4,y:44,fill:'#9ab2c8','font-size':10,'font-weight':700,'text-anchor':'end'},'AROME'));
+    svg.appendChild(el('text',{x:X(it)+4,y:44,fill:'#b3a8ff','font-size':10,'font-weight':700},'ECMWF'));
+  }
+
+  // posición inicial: primer 06:00
+  let i6=D.time.findIndex(d=>d.getHours()>=6); if(i6<0)i6=0;
+  requestAnimationFrame(()=>{ wrap.scrollLeft=Math.max(0, X(i6)-6); });
+}
+
+/* ===== toque: leer una hora ===== */
+function mostrar(clientX){
+  if(!DATA) return;
+  const r=svg.getBoundingClientRect();
+  const xLocal=clientX - r.left;                 // coord dentro del svg (ya escrolado)
+  let i=Math.floor((xLocal-PADL)/HOURW);
+  if(i<0||i>=DATA.time.length){ tip.style.display='none'; return; }
+  const d=DATA.time[i], dr=DATA.dir[i];
+  const rumbo= dr==null?'–':RUMBOS[Math.round(dr/22.5)%16];
+  const nub = (DATA.cl&&DATA.cl.some(v=>v!=null))
+    ? `A ${DATA.ch[i]??'–'} / M ${DATA.cm[i]??'–'} / B ${DATA.cl[i]??'–'} %`
+    : `${DATA.ctot?.[i]??'–'} %`;
+  tip.innerHTML=`<h4>${DIAS[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()]} · ${String(d.getHours()).padStart(2,'0')}:00</h4>`+
+    `<div class="r"><span class="k">Temp</span><b>${DATA.temp[i]!=null?Math.round(DATA.temp[i])+'°':'–'}</b></div>`+
+    `<div class="r"><span class="k">Lluvia</span><b>${DATA.precip[i]>0?DATA.precip[i].toFixed(1)+' mm':'0'}</b></div>`+
+    `<div class="r"><span class="k">Viento</span><b>${DATA.wind[i]!=null?Math.round(DATA.wind[i]):'–'} ${rumbo}${DATA.gust[i]>DATA.wind[i]+10?' ('+Math.round(DATA.gust[i])+')':''}</b></div>`+
+    `<div class="r"><span class="k">Nubes</span><b>${nub}</b></div>`+
+    `<div class="r"><span class="k">Modelo</span><b>${DATA.src&&DATA.src[i]==='A'?'AROME':'ECMWF'}</b></div>`;
+  tip.style.display='block';
+  const tr=tip.getBoundingClientRect();
+  let tx=clientX+12; if(tx+tr.width>innerWidth) tx=clientX-tr.width-12;
+  tip.style.left=Math.max(6,tx)+'px'; tip.style.top=(r.top+plotT+6)+'px';
+}
+wrap.addEventListener('click', e=> mostrar(e.clientX));
+document.addEventListener('click', e=>{ if(!wrap.contains(e.target)) tip.style.display='none'; });
+
+sel.addEventListener('change', cargar);
+document.getElementById('foot').innerHTML =
+  'Prototipo de nueva Previsión (meteograma). <b>AROME</b> mientras cubre (primeras ~48 h), luego <b>ECMWF</b> hasta 7 días. '+
+  'Corrección <b>WM0.2</b> aplicada SOLO a la lluvia (AROME ×'+WM02.precipArome+' · ECMWF ×'+WM02.precipEcmwf+', provisional, a partir del desfase medido en oct-2026 frente a la estación de Béjar). '+
+  'Temperatura y viento aún sin corregir (pendiente de acumular verificación). No es fuente oficial; contrasta con AEMET.';
+cargar();
+</script>
+</body>
+</html>
