@@ -109,9 +109,12 @@ function buildGen(){   // agrega cada 6 h (4 bloques/día): medias (y suma de ll
   const avg=(arr,i)=>{let s=0,c=0;for(let k=i*B;k<i*B+B&&k<n;k++){const v=arr[k];if(v!=null){s+=v;c++;}}return c?s/c:null;};
   const sum=(arr,i)=>{let s=0;for(let k=i*B;k<i*B+B&&k<n;k++)s+=arr[k]||0;return s;};
   const dirA=(i)=>{let x=0,y=0,c=0;for(let k=i*B;k<i*B+B&&k<n;k++){const d=DATA.dir[k];if(d!=null){x+=Math.cos(d*Math.PI/180);y+=Math.sin(d*Math.PI/180);c++;}}if(!c)return null;return (Math.atan2(y,x)*180/Math.PI+360)%360;};
+  const mn=(arr,i)=>{let v=Infinity;for(let k=i*B;k<i*B+B&&k<n;k++){const x=arr[k];if(x!=null&&x<v)v=x;}return isFinite(v)?v:null;};
+  const mx=(arr,i)=>{let v=-Infinity;for(let k=i*B;k<i*B+B&&k<n;k++){const x=arr[k];if(x!=null&&x>v)v=x;}return isFinite(v)?v:null;};
   const col=(f)=>Array.from({length:m},(_,i)=>f(i));
   const g={ time:col(i=>DATA.time[i*B]), src:col(i=>DATA.src[i*B]),
     temp:col(i=>avg(DATA.temp,i)), sens:col(i=>avg(DATA.sens,i)), praw:col(i=>sum(DATA.praw,i)),
+    tmin:col(i=>mn(DATA.temp,i)), tmax:col(i=>mx(DATA.temp,i)),
     cl:col(i=>avg(DATA.cl,i)), cm:col(i=>avg(DATA.cm,i)), ch:col(i=>avg(DATA.ch,i)), ctot:col(i=>avg(DATA.ctot,i)),
     wind:col(i=>avg(DATA.wind,i)), gust:col(i=>avg(DATA.gust,i)), dir:col(i=>dirA(i)),
     l:DATA.l, nA:Math.ceil(DATA.nA/B) };
@@ -216,7 +219,8 @@ function drawChart(cid, s, endIdx, fromStart){
     '<feGaussianBlur in="d" stdDeviation="2.4"/></filter>');
 
   // escalas sobre la ventana
-  const T=[]; for(let j=0;j<nH;j++){const a=D.temp[G(j)],b=D.sens[G(j)]; if(a!=null)T.push(a); if(b!=null)T.push(b);}
+  const T=[]; for(let j=0;j<nH;j++){const a=D.temp[G(j)],b=D.sens[G(j)]; if(a!=null)T.push(a); if(b!=null)T.push(b);
+    if(D.tmax&&D.tmax[G(j)]!=null)T.push(D.tmax[G(j)]); if(D.tmin&&D.tmin[G(j)]!=null)T.push(D.tmin[G(j)]); }
   let tmin=0,tmax=10; if(T.length){ tmin=Math.floor(Math.min(...T)-1); tmax=Math.ceil(Math.max(...T)+1); }
   const tY=t=>plotB-(t-tmin)/((tmax-tmin)||1)*(plotH-16)-8;
   let wmax=25; for(let j=0;j<nH;j++) wmax=Math.max(wmax, D.wind[G(j)]||0, D.gust[G(j)]||0);
@@ -301,9 +305,22 @@ function drawChart(cid, s, endIdx, fromStart){
   if(VISI.sens){ let ss='';for(let j=0;j<nH;j++){const v=D.sens[G(j)];if(v==null)continue;ss+=(ss?'L':'M')+XC(j)+' '+tY(v).toFixed(1)+' ';}
     svg.appendChild(el('path',{d:ss,fill:'none',stroke:'var(--sens)','stroke-width':2,'stroke-dasharray':'5 3',opacity:.9}));
     for(let j=0;j<nH;j+=3){const v=D.sens[G(j)];if(v==null)continue;svg.appendChild(el('text',{x:XC(j),y:tY(v)+14,fill:'var(--sens)','font-size':10,'font-weight':700,'text-anchor':'middle'},Math.round(v)+'°'));} }
-  if(VISI.temp){ let sp='';for(let j=0;j<nH;j++){const v=D.temp[G(j)];if(v==null)continue;sp+=(sp?'L':'M')+XC(j)+' '+tY(v).toFixed(1)+' ';}
-    svg.appendChild(el('path',{d:sp,fill:'none',stroke:'var(--temp)','stroke-width':2.4}));
-    for(let j=0;j<nH;j+=3){const v=D.temp[G(j)];if(v==null)continue;svg.appendChild(el('text',{x:XC(j),y:tY(v)-7,fill:'#ffb784','font-size':10,'font-weight':700,'text-anchor':'middle'},Math.round(v)+'°'));} }
+  if(VISI.temp){
+    if(GEN){   // banda min–max por tramo de 6 h + máx/mín del día escritos
+      let top='',bot='';
+      for(let j=0;j<nH;j++){ const v=D.tmax[G(j)]; if(v==null)continue; top+=(top?'L':'M')+XC(j)+' '+tY(v).toFixed(1)+' '; }
+      for(let j=nH-1;j>=0;j--){ const v=D.tmin[G(j)]; if(v==null)continue; bot+='L'+XC(j)+' '+tY(v).toFixed(1)+' '; }
+      if(top) svg.appendChild(el('path',{d:top+bot+'Z',fill:'var(--temp)','fill-opacity':.28,stroke:'var(--temp)','stroke-width':1.6}));
+      let jmx=-1,jmn=-1,vmx=-Infinity,vmn=Infinity;
+      for(let j=0;j<nH;j++){ const a=D.tmax[G(j)],b=D.tmin[G(j)]; if(a!=null&&a>vmx){vmx=a;jmx=j;} if(b!=null&&b<vmn){vmn=b;jmn=j;} }
+      if(jmx>=0) svg.appendChild(el('text',{x:XC(jmx),y:tY(vmx)-7,fill:'#ff6b6b','font-size':13,'font-weight':800,'text-anchor':'middle'},'máx '+Math.round(vmx)+'°'));
+      if(jmn>=0) svg.appendChild(el('text',{x:XC(jmn),y:tY(vmn)+16,fill:'#8fd0ff','font-size':13,'font-weight':800,'text-anchor':'middle'},'mín '+Math.round(vmn)+'°'));
+    } else {
+      let sp='';for(let j=0;j<nH;j++){const v=D.temp[G(j)];if(v==null)continue;sp+=(sp?'L':'M')+XC(j)+' '+tY(v).toFixed(1)+' ';}
+      svg.appendChild(el('path',{d:sp,fill:'none',stroke:'var(--temp)','stroke-width':2.4}));
+      for(let j=0;j<nH;j+=3){const v=D.temp[G(j)];if(v==null)continue;svg.appendChild(el('text',{x:XC(j),y:tY(v)-7,fill:'#ffb784','font-size':10,'font-weight':700,'text-anchor':'middle'},Math.round(v)+'°'));}
+    }
+  }
 
   // transición AROME -> ECMWF (si cae en la ventana)
   let it=-1; for(let j=0;j<nH;j++){ if(D.src[G(j)]==='E'){it=j;break;} }
