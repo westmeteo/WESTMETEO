@@ -206,10 +206,16 @@ function drawChart(cid, s, endIdx, fromStart){
     // alto (>=6000 m): UNA lámina fina por hora, a la altura media ponderada; color = cobertura media
     if(high.length){
       const g=ns('g'); g.setAttribute('filter',`url(#${fid})`); svg.appendChild(g);
-      const HI_MIN=30;   // descartar niveles altos por debajo de 30% (no cuentan ni para color ni para altura)
+      const HI_MIN=30;   // nivel alto por debajo de 30% se descarta
+      const LOW_BR=40;   // umbral de nube baja/media para unirla (puente) con la banda alta
       for(let j=0;j<nH;j++){ let sp=0,sz=0,sf=0,cnt=0;
         for(const l of high){ const c=l.arr[G(j)]; if(c==null||c<HI_MIN) continue; cnt++; sp+=c; sf+=c/100; sz+=(c/100)*l.z; }
-        if(!cnt) continue; const mc=sp/cnt, mz=sz/sf; const y=zY(mz);   // color=media %, altura=media ponderada por cobertura
+        if(!cnt) continue; const mc=sp/cnt, mz=sz/sf; const y=zY(mz);
+        // puente de unión con la nube baja/media relevante (>= umbral) si queda por debajo de la banda alta
+        let zTopLow=null, cLow=0;
+        for(const l of low){ const c=l.arr[G(j)]; if(c!=null && c>=LOW_BR && (zTopLow==null||l.z>zTopLow)){ zTopLow=l.z; cLow=c; } }
+        if(zTopLow!=null && zTopLow<mz){ const op=Math.min(mc,cLow), yA=zY(mz), yB=zY(zTopLow);
+          g.appendChild(el('rect',{x:X(j),y:yA.toFixed(1),width:HOURW,height:(yB-yA).toFixed(1),fill:grisCover(op),opacity:alphaCover(op)})); }
         g.appendChild(el('rect',{x:X(j),y:(y-5).toFixed(1),width:HOURW,height:10,fill:grisCover(mc),opacity:alphaCover(mc)})); }
     }
     [2000,4000,6000,8000,10000].forEach(z=>{ if(z>zBase+300&&z<zTop-200){const y=zY(z);
