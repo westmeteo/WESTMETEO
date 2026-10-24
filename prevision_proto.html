@@ -204,9 +204,9 @@ function drawChart(cid, s, endIdx){
     if(high.length){
       const g=ns('g'); g.setAttribute('filter',`url(#${fid})`); svg.appendChild(g);
       const HI_MIN=30;   // descartar niveles altos por debajo de 30% (no cuentan ni para color ni para altura)
-      for(let j=0;j<nH;j++){ let sp=0,sz=0,cnt=0;
-        for(const l of high){ const c=l.arr[G(j)]; if(c==null||c<HI_MIN) continue; cnt++; sp+=c; sz+=(c/100)*l.z; }
-        if(!cnt) continue; const mc=sp/cnt, mz=sz/cnt; const y=zY(mz);
+      for(let j=0;j<nH;j++){ let sp=0,sz=0,sf=0,cnt=0;
+        for(const l of high){ const c=l.arr[G(j)]; if(c==null||c<HI_MIN) continue; cnt++; sp+=c; sf+=c/100; sz+=(c/100)*l.z; }
+        if(!cnt) continue; const mc=sp/cnt, mz=sz/sf; const y=zY(mz);   // color=media %, altura=media ponderada por cobertura
         g.appendChild(el('rect',{x:X(j),y:(y-5).toFixed(1),width:HOURW,height:10,fill:grisCover(mc),opacity:alphaCover(mc)})); }
     }
     [2000,4000,6000,8000,10000].forEach(z=>{ if(z>zBase+300&&z<zTop-200){const y=zY(z);
