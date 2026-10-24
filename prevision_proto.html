@@ -102,8 +102,13 @@ const plotT=TOP, plotB=Hsvg-BOT, plotH=plotB-plotT;
 
 const sel=document.getElementById('sel'), tip=document.getElementById('tip');
 function poblarSelector(tipo){
-  sel.innerHTML=''; const lista=LOCS.filter(l=> tipo==='montana'?l.m:!l.m); let zona='';
-  for(const l of lista){ if(l.z!==zona){zona=l.z; const og=document.createElement('optgroup'); og.label=l.z; sel.appendChild(og);} const o=document.createElement('option'); o.textContent=l.n; sel.lastChild.appendChild(o); }
+  sel.innerHTML=''; let lista=LOCS.filter(l=> tipo==='montana'?l.m:!l.m);
+  if(tipo==='montana'){ // montaña: todas juntas, orden alfabético, sin agrupar por zona
+    lista=[...lista].sort((a,b)=>a.n.localeCompare(b.n,'es'));
+    for(const l of lista){ const o=document.createElement('option'); o.textContent=l.n; sel.appendChild(o); }
+  } else { let zona='';
+    for(const l of lista){ if(l.z!==zona){zona=l.z; const og=document.createElement('optgroup'); og.label=l.z; sel.appendChild(og);} const o=document.createElement('option'); o.textContent=l.n; sel.lastChild.appendChild(o); }
+  }
   const def=tipo==='montana'?'Pico Almanzor (2592 m)':'Béjar'; let idx=0; [...sel.options].forEach((o,i)=>{ if(o.textContent===def) idx=i; }); sel.selectedIndex=idx;
 }
 function locSeleccionada(){ if(!sel.options.length) return null; return LOCS.find(l=>l.n===sel.options[sel.selectedIndex].textContent); }
