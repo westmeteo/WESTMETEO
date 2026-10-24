@@ -223,6 +223,8 @@ function drawChart(cid, s, endIdx, fromStart){
   const aEl=(t,a,x)=>{const e=ns(t);for(const k in a)e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;axis.appendChild(e);};
   aEl('text',{x:PADL-4,y:plotT-6,fill:'var(--temp)','font-size':9,'font-weight':800,'text-anchor':'end'},'°C');
   tks(tmin,tmax,4).forEach(v=> aEl('text',{x:PADL-4,y:tY(v)+3,fill:'var(--temp)','font-size':10,'font-weight':700,'text-anchor':'end'},Math.round(v)+'°'));
+  aEl('text',{x:PADL-4,y:plotB+31,fill:'#5fe0c0','font-size':7.5,'font-weight':700,'text-anchor':'end'},'viento km/h');
+  aEl('text',{x:PADL-4,y:plotB+56,fill:'#9ab2c8','font-size':9,'font-weight':700,'text-anchor':'end'},'hora');
 
   // rejilla vertical + horas + días
   let dAnt='';
