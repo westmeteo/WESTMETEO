@@ -26,6 +26,7 @@
            border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(#0c1a28,#0f1f30)}
   .mg-wrap svg{display:block}
   .axis{position:absolute;left:0;top:1px;pointer-events:none;background:linear-gradient(#0c1a28,#0f1f30);border-right:1px solid rgba(58,86,112,.35)}
+  .kmaxis{position:absolute;left:50%;top:1px;transform:translateX(-50%);pointer-events:none}
   .hint{color:var(--mut);font-size:11px;padding:8px 14px;text-align:center}
   #tip{position:fixed;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(10,20,32,.97);
        border:1px solid var(--azul);border-radius:12px;padding:12px 15px;font-size:13px;color:var(--ink);
@@ -46,8 +47,6 @@
 <div class="row">
   <label for="sel" style="color:var(--ink2);font-size:12px">Lugar</label>
   <select id="sel"></select>
-  <label style="color:var(--ink2);font-size:12px;display:flex;align-items:center;gap:6px;margin-left:8px">
-    <input type="checkbox" id="wm02sw"> WM1.0 lluvia <span style="color:var(--mut)">(solo flujo S/SO/O)</span></label>
 </div>
 <div class="leg">
   <b><span class="sw" style="background:var(--temp)"></span>Temperatura (°C)</b>
@@ -70,13 +69,14 @@ const LUGARES = [
 ];
 // WM1.0: la lluvia SOLO se realza con flujo del S/SO/O (upslope en la sierra). PROVISIONAL.
 const WM02 = { precipArome: 3.0, precipEcmwf: 3.8, tempOffset: 0.0, windFactor: 1.0 };
-let   WM02_ON = false;
+const   WM02_ON=true;   // sesgo WM1.0 SIEMPRE activo (realce de lluvia solo con flujo S/SO/O)
 const PLEV=[[1000,110],[925,760],[850,1460],[700,3010],[500,5570],[400,7180],[300,9160],[250,10360],[200,11780]]; // hPa -> altitud m
 const enSO = dir => dir!=null && dir>=175 && dir<=280;
 function precipCorr(raw, dir, src){ if(!raw) return 0; return (WM02_ON && enSO(dir)) ? raw*(src==='A'?WM02.precipArome:WM02.precipEcmwf) : raw; }
 
 const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const capMes=m=>{const s=MES[m];return s.charAt(0).toUpperCase()+s.slice(1);};
 const RUMBOS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
 const MAX_CHARTS=6;
 
@@ -105,7 +105,7 @@ async function cargar(){
   try{
     [A,E]=await Promise.all([
       fetch(u('meteofrance_arome_france_hd',3)).then(r=>r.json()).catch(()=>null),   // AROME: mientras cubra
-      fetch(u('ecmwf_ifs025',14,extraCloud)).then(r=>r.json()),                      // ECMWF: ~14 días + perfil de nubes
+      fetch(u('ecmwf_ifs025',7,extraCloud)).then(r=>r.json()),                      // ECMWF: 7 días + perfil de nubes
     ]);
   }catch(e){ document.getElementById('fuente').innerHTML='<span class="warn">No se pudo cargar la previsión.</span>'; return; }
   const EH=E.hourly, AH=(A&&A.hourly)||{time:[]};
@@ -130,32 +130,31 @@ async function cargar(){
 
 function setFuente(){
   if(!DATA) return;
-  document.getElementById('fuente').innerHTML=`<b>${DATA.l.n}</b> · AROME las primeras ${DATA.nA} h, luego ECMWF · `+
-    (WM02_ON?`<span style="color:#bfe0ff">WM1.0 lluvia ON (solo flujo S/SO/O)</span>`:`lluvia en crudo · WM1.0 off`);
+  document.getElementById('fuente').innerHTML=`<b>${DATA.l.n}</b> · AROME las primeras ${DATA.nA} h, luego ECMWF · <span style="color:#bfe0ff">WM1.0 lluvia (flujo S/SO/O)</span>`;
 }
 
 function pintarTodo(){
   const host=document.getElementById('charts'); host.innerHTML='';
   if(!DATA){ return; }
-  const totalDays=Math.floor(DATA.time.length/24);
-  const K=Math.min(MAX_CHARTS, Math.max(1, totalDays-6));   // cada gráfica = 7 días, empezando un día más tarde
-  for(let k=0;k<K;k++) drawChart(k, k*24);
+  const endIdx=Math.min(DATA.time.length, 7*24);           // solo los 7 primeros días
+  for(let k=0; k*24 < endIdx; k++) drawChart(k, k*24, endIdx);   // cada gráfica empieza un día después y todas acaban en el día 7
   setFuente();
 }
 
 /* ===== una gráfica (ventana de 7 días desde el índice s) ===== */
-function drawChart(cid, s){
-  const D=DATA, N=D.time.length, nH=Math.min(168, N-s);
+function drawChart(cid, s, endIdx){
+  const D=DATA, N=D.time.length, nH=endIdx - s;
   if(nH<6) return;
   const box=document.createElement('div'); box.className='mg-box';
   const cap=document.createElement('div'); cap.className='cap';
   const d0=D.time[s];
-  cap.textContent=(s===0?'▸ Desde ahora':'▸ Desde '+DIAS[d0.getDay()]+' '+d0.getDate()+' '+MES[d0.getMonth()])+' · 7 días';
+  cap.textContent=`${DIAS[d0.getDay()]} ${d0.getDate()} ${capMes(d0.getMonth())}`;
   const posic=document.createElement('div'); posic.className='mg-posic';
   const wrap=document.createElement('div'); wrap.className='mg-wrap';
   const svg=ns('svg'); wrap.appendChild(svg);
   const axis=ns('svg'); axis.setAttribute('class','axis');
-  posic.appendChild(wrap); posic.appendChild(axis);
+  const kmov=ns('svg'); kmov.setAttribute('class','kmaxis'); kmov.setAttribute('width',40); kmov.setAttribute('height',Hsvg); kmov.setAttribute('viewBox',`0 0 40 ${Hsvg}`);
+  posic.appendChild(wrap); posic.appendChild(axis); posic.appendChild(kmov);
   box.appendChild(cap); box.appendChild(posic);
   document.getElementById('charts').appendChild(box);
 
@@ -182,23 +181,27 @@ function drawChart(cid, s){
 
   const grisCover=c=>{const f=Math.max(0,Math.min(1,c/100));const L=Math.round(216-f*154);return `rgb(${L},${L+5},${L+11})`;};
   const alphaCover=c=>{const f=Math.max(0,Math.min(1,c/100));return (Math.pow(f,0.8)*0.92).toFixed(3);};
-  const gradFrom=(id,garr)=>{let st='',has=false;
-    for(let j=0;j<nH;j++){const c=garr[G(j)]; if(c==null)continue; has=true;
+  const gradF=(id,valAt)=>{let st='',has=false;
+    for(let j=0;j<nH;j++){const c=valAt(j); if(c==null||c<=0)continue; has=true;
       st+=`<stop offset="${((j+0.5)/nH).toFixed(4)}" stop-color="${grisCover(c)}" stop-opacity="${alphaCover(c)}"/>`;}
     if(!has)return null;
     defs.insertAdjacentHTML('beforeend',`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${gw0}" y1="0" x2="${gw1}" y2="0">${st}</linearGradient>`);
     return id;};
 
-  // NUBES por altitud (perfil de presión ECMWF): lámina fina por nivel, cirros finos arriba
+  // NUBES por altitud (perfil de presión ECMWF): lámina fina por nivel; niveles seguidos con nube -> unidos
   if(D.clev&&D.clev.length){
-    const zBase=0, zTop=Math.max(2600, Math.max(...D.clev.map(l=>l.z))+800);
+    const lev=D.clev.slice().sort((a,b)=>a.z-b.z);
+    const zBase=0, zTop=Math.max(2600, lev[lev.length-1].z+800);
     const zY=z=>plotB-(z-zBase)/(zTop-zBase)*plotH, THc=22;
-    D.clev.forEach((l,k)=>{ const id=gradFrom(`cl${cid}_${k}`,l.arr); if(!id)return; const y=zY(l.z);
+    for(let k=0;k<lev.length-1;k++){ const lo=lev[k], hi=lev[k+1];
+      const id=gradF(`br${cid}_${k}`, j=>{ const a=lo.arr[G(j)], b=hi.arr[G(j)]; return (a!=null&&b!=null&&a>0&&b>0)?Math.min(a,b):null; });
+      if(id){ const y1=zY(hi.z), y2=zY(lo.z); svg.appendChild(el('rect',{x:gw0,y:y1.toFixed(1),width:(gw1-gw0),height:(y2-y1).toFixed(1),fill:`url(#${id})`,filter:`url(#${fid})`})); } }
+    lev.forEach((l,k)=>{ const id=gradF(`cl${cid}_${k}`, j=>l.arr[G(j)]); if(!id)return; const y=zY(l.z);
       svg.appendChild(el('rect',{x:gw0,y:(y-THc/2).toFixed(1),width:(gw1-gw0),height:THc,fill:`url(#${id})`,filter:`url(#${fid})`})); });
     [2000,4000,6000,8000,10000].forEach(z=>{ if(z>zBase+300&&z<zTop-200){const y=zY(z);
-      svg.appendChild(el('text',{x:W-PADR-3,y:(y-2).toFixed(1),fill:'#60798f','font-size':8,'text-anchor':'end'},(z/1000)+' km')); }});
+      kmov.appendChild(el('text',{x:20,y:(y+2).toFixed(1),fill:'#60798f','font-size':7.2,'font-weight':700,'text-anchor':'middle',stroke:'#0c1a28','stroke-width':2.6,'paint-order':'stroke'},(z/1000)+' km')); }});
   }else if(D.ctot&&D.ctot.some(v=>v!=null)){
-    const id=gradFrom('cl'+cid+'t',D.ctot); if(id) svg.appendChild(el('rect',{x:gw0,y:plotT-7,width:(gw1-gw0),height:plotH+14,fill:`url(#${id})`,filter:`url(#${fid})`}));
+    const id=gradF('cl'+cid+'t', j=>D.ctot[G(j)]); if(id) svg.appendChild(el('rect',{x:gw0,y:plotT-7,width:(gw1-gw0),height:plotH+14,fill:`url(#${id})`,filter:`url(#${fid})`}));
   }
 
   // rejilla de temperatura + eje izquierdo fijo (°C y km/h)
@@ -216,17 +219,19 @@ function drawChart(cid, s){
     if(dk!==dAnt){ dAnt=dk;
       svg.appendChild(el('line',{x1:X(j),y1:42,x2:X(j),y2:plotB,stroke:'#49708f','stroke-width':1.2}));
       let tot=0; for(let k=j;k<nH&&(D.time[G(k)].getDate()+'-'+D.time[G(k)].getMonth())===dk;k++) tot+=PC[k]||0;
-      svg.appendChild(el('text',{x:X(j)+6,y:21,fill:'#eaf2f8','font-size':15,'font-weight':800},`${DIAS[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()]}`));
-      const ll=tot>=0.5?`${tot.toFixed(tot<10?1:0)} mm`:'seco';
-      svg.appendChild(el('text',{x:X(j)+6,y:38,fill:tot>=0.5?'#7fc0ff':'#6c8aa6','font-size':12,'font-weight':700},(tot>=0.5?'🌧 ':'· ')+ll));
+      const th=el('text',{x:X(j)+6,y:24,fill:'#eaf2f8','font-size':15,'font-weight':800});
+      th.appendChild(el('tspan',{},`${DIAS[d.getDay()]} ${d.getDate()} ${capMes(d.getMonth())} `));
+      th.appendChild(el('tspan',{fill:'#7fc0ff','font-size':11,'font-weight':700},`(${tot.toFixed(1)}mm)`));
+      svg.appendChild(th);
     }else svg.appendChild(el('line',{x1:X(j),y1:plotT,x2:X(j),y2:plotB,stroke:'#22384c','stroke-width':1}));
     svg.appendChild(el('text',{x:XC(j),y:Hsvg-28,fill:'#9ab2c8','font-size':10,'text-anchor':'middle'},String(hr).padStart(2,'0')));
   }
   svg.appendChild(el('line',{x1:PADL,y1:plotB,x2:gw1,y2:plotB,stroke:'#49708f','stroke-width':1}));
 
-  // lluvia (barra final)
+  // lluvia (barra final) con mm encima
   for(let j=0;j<nH;j++){ const cor=PC[j]||0; if(cor<=0)continue; const h=Math.max(1.5,(cor/rmax)*rPx);
-    svg.appendChild(el('rect',{x:X(j)+6,y:plotB-h,width:HOURW-12,height:h,rx:2,fill:'var(--lluvia)',opacity:.6})); }
+    svg.appendChild(el('rect',{x:X(j)+6,y:plotB-h,width:HOURW-12,height:h,rx:2,fill:'var(--lluvia)',opacity:.6}));
+    if(cor>=0.5) svg.appendChild(el('text',{x:XC(j),y:plotB-h-3,fill:'#bfe0ff','font-size':9,'font-weight':700,'text-anchor':'middle',stroke:'#0c1a28','stroke-width':2.4,'paint-order':'stroke'},cor.toFixed(1))); }
 
   // flechas de viento (grandes)
   for(let j=0;j<nH;j+=2){ const dr=D.dir[G(j)]; if(dr==null)continue;
@@ -291,10 +296,9 @@ function mostrar(i){
 document.addEventListener('click', e=>{ if(!e.target.closest('.mg-wrap')) tip.style.display='none'; });
 
 sel.addEventListener('change', cargar);
-document.getElementById('wm02sw').addEventListener('change', e=>{ WM02_ON=e.target.checked; pintarTodo(); });
 document.getElementById('foot').innerHTML =
-  'Prototipo de nueva Previsión (meteograma apilado). Cada bloque es una ventana de 7 días; el de abajo empieza un día después. '+
-  '<b>AROME</b> mientras cubre (primeras ~48 h), luego <b>ECMWF</b>. Por defecto la lluvia va en crudo; el interruptor <b>WM1.0</b> la realza solo con flujo del <b>S/SO/O</b>. '+
+  'Prototipo de nueva Previsión (meteograma apilado). Solo los 7 primeros días: el primer bloque es la semana completa y cada bloque de abajo empieza un día después (el último, solo 24 h). '+
+  '<b>AROME</b> mientras cubre (primeras ~48 h), luego <b>ECMWF</b>. Lluvia con corrección <b>WM1.0</b> (realce solo con flujo del <b>S/SO/O</b>). '+
   'Nubes por altitud desde el perfil de presión de ECMWF. No es fuente oficial; contrasta con AEMET.';
 cargar();
 </script>
