@@ -51,6 +51,7 @@
 <div class="leg">
   <b><span class="sw" style="background:var(--temp)"></span>Temperatura (°C)</b>
   <b><span class="sw" style="background:var(--viento)"></span>Viento (km/h)</b>
+  <b><span class="sw" style="background:repeating-linear-gradient(90deg,var(--viento) 0 3px,transparent 3px 6px)"></span>Racha</b>
   <b><span class="sw sq" style="background:var(--lluvia);opacity:.6"></span>Lluvia (mm/h)</b>
   <b><span class="sw sq" style="background:linear-gradient(90deg,#d8dee4,#4a535c)"></span>Nubes por altitud (claro→oscuro = %)</b>
 </div>
@@ -261,6 +262,8 @@ function drawChart(cid, s, endIdx, fromStart){
   const pw=f=>{let sp='';for(let j=0;j<nH;j++){const v=D[f][G(j)];if(v==null)continue;sp+=(sp?'L':'M')+XC(j)+' '+wY(v).toFixed(1)+' ';}return sp;};
   svg.appendChild(el('path',{d:pw('gust'),fill:'none',stroke:'var(--viento)','stroke-width':1,'stroke-dasharray':'3 3',opacity:.5}));
   svg.appendChild(el('path',{d:pw('wind'),fill:'none',stroke:'var(--viento)','stroke-width':2}));
+  for(let j=0;j<nH;j+=3){ const g=D.gust[G(j)]; if(g==null)continue;   // etiquetas de racha sobre la línea, como la temperatura
+    svg.appendChild(el('text',{x:XC(j),y:wY(g)-5,fill:'#7fd9c8','font-size':9,'font-weight':700,'text-anchor':'middle'},Math.round(g)+' km/h')); }
   let sp='';for(let j=0;j<nH;j++){const v=D.temp[G(j)];if(v==null)continue;sp+=(sp?'L':'M')+XC(j)+' '+tY(v).toFixed(1)+' ';}
   svg.appendChild(el('path',{d:sp,fill:'none',stroke:'var(--temp)','stroke-width':2.4}));
   for(let j=0;j<nH;j+=3){const v=D.temp[G(j)];if(v==null)continue;svg.appendChild(el('text',{x:XC(j),y:tY(v)-7,fill:'#ffb784','font-size':10,'font-weight':700,'text-anchor':'middle'},Math.round(v)+'°'));}
