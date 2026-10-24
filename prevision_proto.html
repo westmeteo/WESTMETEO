@@ -340,14 +340,17 @@ function drawChart(cid, s, endIdx, fromStart){
   { const sp0=document.createElement('div'); sp0.style.cssText='flex:0 0 auto;width:'+PADL+'px'; dayrow.appendChild(sp0);
     let jj=0;
     while(jj<nH){ const d=D.time[G(jj)], dk=d.getDate()+'-'+d.getMonth();
-      let cnt=0,tot=0,tmn=Infinity,tmx=-Infinity;
+      let cnt=0,tot=0,tmn=Infinity,tmx=-Infinity,sC=0,sH=0,sLM=0,nc=0;
       while(jj+cnt<nH && (D.time[G(jj+cnt)].getDate()+'-'+D.time[G(jj+cnt)].getMonth())===dk){
         const gi=G(jj+cnt); tot+=PC[jj+cnt]||0;
         const lo=(D.tmin&&D.tmin[gi]!=null)?D.tmin[gi]:D.temp[gi], hi=(D.tmax&&D.tmax[gi]!=null)?D.tmax[gi]:D.temp[gi];
-        if(lo!=null&&lo<tmn)tmn=lo; if(hi!=null&&hi>tmx)tmx=hi; cnt++; }
+        if(lo!=null&&lo<tmn)tmn=lo; if(hi!=null&&hi>tmx)tmx=hi;
+        if(D.ctot[gi]!=null){sC+=D.ctot[gi];nc++;} if(D.ch[gi]!=null)sH+=D.ch[gi]; sLM+=Math.max(D.cl[gi]||0,D.cm[gi]||0);
+        cnt++; }
+      const C=nc?sC/nc:0, H=nc?sH/nc:0, LM=nc?sLM/nc:0, ico=iconoDia(tot,C,H,LM,tmx);
       const sec=document.createElement('div'); sec.className='daysec'; sec.style.width=(cnt*SW)+'px';
       const lbl=document.createElement('div'); lbl.className='daylbl';
-      lbl.innerHTML=`${DIAS[d.getDay()]} ${d.getDate()} ${capMes(d.getMonth())} `+
+      lbl.innerHTML=`${ico} ${DIAS[d.getDay()]} ${d.getDate()} ${capMes(d.getMonth())} `+
         `<span style="color:#7fc0ff;font-size:12px;font-weight:700">(💧 ${tot.toFixed(1)}mm)</span>`+
         (isFinite(tmn)?`<span style="color:#8fd0ff;font-size:14px;margin-left:13px">mín ${Math.round(tmn)}°</span>`+
                        `<span style="color:#ff6b6b;font-size:14px;margin-left:7px">máx ${Math.round(tmx)}°</span>`:'');
@@ -363,6 +366,14 @@ function drawChart(cid, s, endIdx, fromStart){
 }
 
 /* ===== tooltip ===== */
+function iconoDia(P,C,H,LM,tmax){   // P=lluvia mm/día, C=nubes total %, H=nubes altas %, LM=bajas/medias %
+  const frio = tmax!=null && tmax<2;
+  if(P>=1){ if(frio) return '🌨️'; if(P>=8) return '⛈️'; if(LM>=60) return '🌧️'; return '🌦️'; }
+  if(LM>=60 || C>=75) return '☁️';
+  if(LM>=25) return '⛅';
+  if(H>=30) return '🌤️';
+  return '☀️';
+}
 function nubesTexto(ch,cm,cl,ctot){
   const TH=40;
   if(ch!=null||cm!=null||cl!=null){
