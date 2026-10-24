@@ -136,10 +136,12 @@ function setFuente(){
 function pintarTodo(){
   const host=document.getElementById('charts'); host.innerHTML='';
   if(!DATA){ return; }
+  const now=new Date(); let nowIdx=0;
+  for(let i=0;i<DATA.time.length-1;i++){ if(DATA.time[i]<=now && now<DATA.time[i+1]){ nowIdx=i; break; } }
   const end7=Math.min(DATA.time.length, 7*24);
   const end15=Math.min(DATA.time.length, 15*24);
-  drawChart(0, 0, end15);                                   // TEMPORAL: primera gráfica a 15 días (para inspeccionar condiciones)
-  for(let k=1; k*24 < end7; k++) drawChart(k, k*24, end7);  // resto: escalera hasta el día 7
+  drawChart(0, nowIdx, end15);                              // 1ª gráfica: desde AHORA (TEMPORAL a 15 días)
+  for(let k=1; k*24 < end7; k++) drawChart(k, k*24, end7);  // resto: desde las 00:00 del día k, hasta el día 7
   setFuente();
 }
 
@@ -148,16 +150,13 @@ function drawChart(cid, s, endIdx){
   const D=DATA, N=D.time.length, nH=endIdx - s;
   if(nH<6) return;
   const box=document.createElement('div'); box.className='mg-box';
-  const cap=document.createElement('div'); cap.className='cap';
-  const d0=D.time[s];
-  cap.textContent=`${DIAS[d0.getDay()]} ${d0.getDate()} ${capMes(d0.getMonth())}`;
   const posic=document.createElement('div'); posic.className='mg-posic';
   const wrap=document.createElement('div'); wrap.className='mg-wrap';
   const svg=ns('svg'); wrap.appendChild(svg);
   const axis=ns('svg'); axis.setAttribute('class','axis');
   const kmov=ns('svg'); kmov.setAttribute('class','kmaxis'); kmov.setAttribute('width',40); kmov.setAttribute('height',Hsvg); kmov.setAttribute('viewBox',`0 0 40 ${Hsvg}`);
   posic.appendChild(wrap); posic.appendChild(axis); posic.appendChild(kmov);
-  box.appendChild(cap); box.appendChild(posic);
+  box.appendChild(posic);
   document.getElementById('charts').appendChild(box);
 
   const W=PADL+PADR+nH*HOURW, gw0=PADL, gw1=W-PADR;
@@ -234,11 +233,11 @@ function drawChart(cid, s, endIdx){
       svg.appendChild(el('line',{x1:X(j),y1:42,x2:X(j),y2:plotB,stroke:'#49708f','stroke-width':1.2}));
       let tot=0,tmn=Infinity,tmx=-Infinity;
       for(let k=j;k<nH&&(D.time[G(k)].getDate()+'-'+D.time[G(k)].getMonth())===dk;k++){ tot+=PC[k]||0; const tv=D.temp[G(k)]; if(tv!=null){ if(tv<tmn)tmn=tv; if(tv>tmx)tmx=tv; } }
-      const th=el('text',{x:X(j)+6,y:24,fill:'#eaf2f8','font-size':15,'font-weight':800});
+      const th=el('text',{x:X(j)+6,y:25,fill:'#eaf2f8','font-size':17,'font-weight':800});
       th.appendChild(el('tspan',{},`${DIAS[d.getDay()]} ${d.getDate()} ${capMes(d.getMonth())} `));
-      th.appendChild(el('tspan',{fill:'#7fc0ff','font-size':11,'font-weight':700},`(${tot.toFixed(1)}mm) `));
-      if(isFinite(tmn)){ th.appendChild(el('tspan',{fill:'#8fd0ff','font-size':13,'font-weight':800},` ${Math.round(tmn)}°`));
-        th.appendChild(el('tspan',{fill:'#ff6b6b','font-size':13,'font-weight':800},` ${Math.round(tmx)}°`)); }
+      th.appendChild(el('tspan',{fill:'#7fc0ff','font-size':12,'font-weight':700},`(${tot.toFixed(1)}mm) `));
+      if(isFinite(tmn)){ th.appendChild(el('tspan',{fill:'#8fd0ff','font-size':14,'font-weight':800},` ${Math.round(tmn)}°`));
+        th.appendChild(el('tspan',{fill:'#ff6b6b','font-size':14,'font-weight':800},` ${Math.round(tmx)}°`)); }
       svg.appendChild(th);
     }else svg.appendChild(el('line',{x1:X(j),y1:plotT,x2:X(j),y2:plotB,stroke:'#22384c','stroke-width':1}));
     svg.appendChild(el('text',{x:XC(j),y:Hsvg-28,fill:'#9ab2c8','font-size':10,'text-anchor':'middle'},String(hr).padStart(2,'0')));
