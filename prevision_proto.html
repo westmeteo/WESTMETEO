@@ -307,15 +307,15 @@ function drawChart(cid, s, endIdx, fromStart){
     svg.appendChild(el('path',{d:ss,fill:'none',stroke:'var(--sens)','stroke-width':2,'stroke-dasharray':'5 3',opacity:.9}));
     for(let j=0;j<nH;j+=3){const v=D.sens[G(j)];if(v==null)continue;svg.appendChild(el('text',{x:XC(j),y:tY(v)+14,fill:'var(--sens)','font-size':10,'font-weight':700,'text-anchor':'middle'},Math.round(v)+'°'));} }
   if(VISI.temp){
-    if(GEN){   // banda min–max por tramo de 6 h + máx/mín del día escritos
-      let top='',bot='';
-      for(let j=0;j<nH;j++){ const v=D.tmax[G(j)]; if(v==null)continue; top+=(top?'L':'M')+XC(j)+' '+tY(v).toFixed(1)+' '; }
-      for(let j=nH-1;j>=0;j--){ const v=D.tmin[G(j)]; if(v==null)continue; bot+='L'+XC(j)+' '+tY(v).toFixed(1)+' '; }
-      if(top) svg.appendChild(el('path',{d:top+bot+'Z',fill:'var(--temp)','fill-opacity':.28,stroke:'var(--temp)','stroke-width':1.6}));
-      let jmx=-1,jmn=-1,vmx=-Infinity,vmn=Infinity;
-      for(let j=0;j<nH;j++){ const a=D.tmax[G(j)],b=D.tmin[G(j)]; if(a!=null&&a>vmx){vmx=a;jmx=j;} if(b!=null&&b<vmn){vmn=b;jmn=j;} }
-      if(jmx>=0) svg.appendChild(el('text',{x:XC(jmx),y:tY(vmx)-7,fill:'#ff6b6b','font-size':13,'font-weight':800,'text-anchor':'middle'},'máx '+Math.round(vmx)+'°'));
-      if(jmn>=0) svg.appendChild(el('text',{x:XC(jmn),y:tY(vmn)+16,fill:'#8fd0ff','font-size':13,'font-weight':800,'text-anchor':'middle'},'mín '+Math.round(vmn)+'°'));
+    if(GEN){   // marcador de rango por tramo de 6 h: línea vertical con flecha ↑ (máx) y ↓ (mín) + cifras
+      for(let j=0;j<nH;j++){ const mx=D.tmax[G(j)], mn=D.tmin[G(j)]; if(mx==null||mn==null) continue;
+        const cx=XC(j), yT=tY(mx), yB=tY(mn);
+        svg.appendChild(el('line',{x1:cx,y1:yT,x2:cx,y2:yB,stroke:'var(--temp)','stroke-width':2}));
+        svg.appendChild(el('path',{d:`M${cx} ${yT} L${cx-5} ${yT+9} L${cx+5} ${yT+9} Z`,fill:'#ff6b6b'}));
+        svg.appendChild(el('path',{d:`M${cx} ${yB} L${cx-5} ${yB-9} L${cx+5} ${yB-9} Z`,fill:'#8fd0ff'}));
+        svg.appendChild(el('text',{x:cx,y:yT-7,fill:'#ff6b6b','font-size':12,'font-weight':800,'text-anchor':'middle'},Math.round(mx)+'°'));
+        svg.appendChild(el('text',{x:cx,y:yB+17,fill:'#8fd0ff','font-size':12,'font-weight':800,'text-anchor':'middle'},Math.round(mn)+'°'));
+      }
     } else {
       let sp='';for(let j=0;j<nH;j++){const v=D.temp[G(j)];if(v==null)continue;sp+=(sp?'L':'M')+XC(j)+' '+tY(v).toFixed(1)+' ';}
       svg.appendChild(el('path',{d:sp,fill:'none',stroke:'var(--temp)','stroke-width':2.4}));
