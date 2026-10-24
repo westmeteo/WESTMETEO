@@ -115,6 +115,7 @@
  .vf-selbar label{font-family:'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#7fa7c6;font-size:.8rem}
 
  /* PARTES */
+ .prevframe{width:100%;height:86vh;border:0;display:block;background:#0f1f30;border-radius:8px}
  .prevision{background:linear-gradient(135deg,#2b4a63,#284460);border-left:4px solid #3a7bd5;border-radius:6px;
    padding:22px 26px;margin-bottom:18px;transition:all .25s;box-shadow:0 2px 8px rgba(0,0,0,.12)}
  .prevision:hover{background:linear-gradient(135deg,#305572,#2c4e6a);transform:translateX(4px);box-shadow:0 4px 16px rgba(0,0,0,.2)}
@@ -198,6 +199,8 @@
 
   <!-- PREVISION -->
   <section class="panel activa" id="prevision">
+    <iframe class="prevframe" src="prevision_proto.html" title="Previsión Westmeteo"></iframe>
+    <div id="prevClasica" style="display:none">
     <div class="loctipo">
       <button type="button" class="lt activa" data-tipo="loc">Localidades</button>
       <button type="button" class="lt" data-tipo="montana">Montaña</button>
@@ -209,6 +212,7 @@
     <p class="fuente">Próximas 48 h · <b>AROME</b> × Modelo propio <b>WM0.2</b> (sesgos microclimáticos) · <span class="beta">BETA</span></p>
     <div id="estado">Cargando previsión…</div>
     <div id="tabla"></div>
+    </div>
   </section>
 
   <!-- ESTACIONES -->

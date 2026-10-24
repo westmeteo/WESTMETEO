@@ -416,7 +416,7 @@ function syncLeg(){ legBtns.forEach(b=>b.classList.toggle('off', !VISI[b.dataset
 legBtns.forEach(b=>{ const k=b.dataset.k; b.addEventListener('click',()=>{ VISI[k]=!VISI[k]; b.classList.toggle('off',!VISI[k]); if(DATA) pintarTodo(); }); });
 syncLeg();
 document.getElementById('foot').innerHTML =
-  'Previsión elaborada a partir del estudio microclimático del Sistema Central y el oeste peninsular. '+
+  'Previsión especializada en montaña, elaborada a partir del estudio microclimático del Sistema Central y el oeste peninsular. '+
   'No constituye una fuente meteorológica oficial; para la predicción y los avisos oficiales, consulte AEMET.';
 cargar();
 </script>
