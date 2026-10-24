@@ -342,7 +342,9 @@ function drawChart(cid, s, endIdx, fromStart){
     while(jj<nH){ const d=D.time[G(jj)], dk=d.getDate()+'-'+d.getMonth();
       let cnt=0,tot=0,tmn=Infinity,tmx=-Infinity;
       while(jj+cnt<nH && (D.time[G(jj+cnt)].getDate()+'-'+D.time[G(jj+cnt)].getMonth())===dk){
-        tot+=PC[jj+cnt]||0; const tv=D.temp[G(jj+cnt)]; if(tv!=null){if(tv<tmn)tmn=tv;if(tv>tmx)tmx=tv;} cnt++; }
+        const gi=G(jj+cnt); tot+=PC[jj+cnt]||0;
+        const lo=(D.tmin&&D.tmin[gi]!=null)?D.tmin[gi]:D.temp[gi], hi=(D.tmax&&D.tmax[gi]!=null)?D.tmax[gi]:D.temp[gi];
+        if(lo!=null&&lo<tmn)tmn=lo; if(hi!=null&&hi>tmx)tmx=hi; cnt++; }
       const sec=document.createElement('div'); sec.className='daysec'; sec.style.width=(cnt*SW)+'px';
       const lbl=document.createElement('div'); lbl.className='daylbl';
       lbl.innerHTML=`${DIAS[d.getDay()]} ${d.getDate()} ${capMes(d.getMonth())} `+
