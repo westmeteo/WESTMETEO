@@ -197,7 +197,10 @@ function drawChart(cid, s, endIdx){
     const zY=z=>plotB-(z-zBase)/(zTop-zBase)*plotH;
     const thick=z=>Math.max(9, 26-(z/12000)*17);   // decks bajos gruesos, nubes medias algo más finas
     const low=lev.filter(l=>l.z<6000), high=lev.filter(l=>l.z>=6000);
-    // bajo/medio (<6000 m): una lámina por nivel
+    // bajo/medio (<6000 m): puentes entre niveles contiguos con nube (masa continua) + lámina por nivel
+    for(let k=0;k<low.length-1;k++){ const lo=low[k], hi=low[k+1];
+      const id=gradF(`br${cid}_${k}`, j=>{ const a=lo.arr[G(j)], b=hi.arr[G(j)]; return (a!=null&&b!=null&&a>0&&b>0)?Math.min(a,b):null; });
+      if(id){ const y1=zY(hi.z), y2=zY(lo.z); svg.appendChild(el('rect',{x:gw0,y:y1.toFixed(1),width:(gw1-gw0),height:(y2-y1).toFixed(1),fill:`url(#${id})`,filter:`url(#${fid})`})); } }
     low.forEach((l,k)=>{ const id=gradF(`cl${cid}_${k}`, j=>l.arr[G(j)]); if(!id)return; const y=zY(l.z), h=thick(l.z);
       svg.appendChild(el('rect',{x:gw0,y:(y-h/2).toFixed(1),width:(gw1-gw0),height:h.toFixed(1),fill:`url(#${id})`,filter:`url(#${fid})`})); });
     // alto (>=6000 m): UNA lámina fina por hora, a la altura media ponderada; color = cobertura media
