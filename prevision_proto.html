@@ -103,7 +103,7 @@ const plotT=TOP, plotB=Hsvg-BOT, plotH=plotB-plotT;
 const sel=document.getElementById('sel'), tip=document.getElementById('tip');
 function poblarSelector(tipo){
   sel.innerHTML=''; let lista=LOCS.filter(l=> tipo==='montana'?l.m:!l.m);
-  if(tipo==='montana'){ // montaña: todas juntas, orden alfabético, sin agrupar por zona
+  if(tipo!=='montana'){ // localidades: todas juntas, orden alfabético, sin agrupar por zona
     lista=[...lista].sort((a,b)=>a.n.localeCompare(b.n,'es'));
     for(const l of lista){ const o=document.createElement('option'); o.textContent=l.n; sel.appendChild(o); }
   } else { let zona='';
