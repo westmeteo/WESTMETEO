@@ -15,11 +15,12 @@
   .fuente{color:var(--mut);font-size:11px;margin:4px 0 0}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:0 14px 8px}
   select{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit}
-  .leg{display:grid;grid-template-columns:repeat(3,max-content);gap:12px 22px;justify-content:center;font-size:12.5px;color:var(--ink2);padding:2px 14px 10px}
+  .leg{display:grid;grid-template-columns:repeat(3,max-content);gap:8px 14px;justify-content:center;font-size:11px;color:var(--ink2);padding:2px 14px 8px}
   .leg b{display:inline-flex;align-items:center;gap:6px;font-weight:600;cursor:pointer;user-select:none;transition:.15s;
-         border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:999px;padding:5px 12px}
+         border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:999px;padding:4px 10px}
   .leg b.off{opacity:.45;background:none;border-color:#2a3f54}
-  .modes{display:flex;gap:10px;justify-content:center;padding:2px 14px 10px}
+  #topbar{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--line)}
+  .modes{display:flex;gap:10px;justify-content:center;padding:6px 14px 8px}
   .mode{font:700 13px system-ui,sans-serif;color:var(--ink2);background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;padding:8px 18px;cursor:pointer}
   .mode.on{background:#2980b9;color:#fff;border-color:#2980b9}
   .sw{width:16px;height:4px;border-radius:2px;display:inline-block}
@@ -50,6 +51,7 @@
 </style>
 </head>
 <body data-palette="#ff9d5c,#5fe0c0,#4aa3ff,#8fd0ff">
+<div id="topbar">
 <header>
   <h1>Previsión <span class="beta">PROTOTIPO</span></h1>
   <div class="sub">Meteograma apilado · <b>AROME</b> mientras cubre + <b>ECMWF</b> × <b>WM1.0</b></div>
@@ -59,6 +61,7 @@
   <label for="sel" style="color:var(--ink2);font-size:12px">Lugar</label>
   <select id="sel"></select>
 </div>
+<div class="modes"><button id="mGen" class="mode on">Previsión general</button><button id="mDet" class="mode">Previsión detallada</button></div>
 <div class="leg">
   <b data-k="temp"><span class="sw" style="background:var(--temp)"></span>Temperatura</b>
   <b data-k="sens"><span class="sw" style="background:var(--sens)"></span>Sensación</b>
@@ -67,7 +70,7 @@
   <b data-k="racha"><span class="sw" style="background:repeating-linear-gradient(90deg,var(--racha) 0 3px,transparent 3px 6px)"></span>Racha</b>
   <b data-k="nubes"><span class="sw sq" style="background:linear-gradient(90deg,#d8dee4,#4a535c)"></span>Nubes</b>
 </div>
-<div class="modes"><button id="mGen" class="mode on">Previsión general</button><button id="mDet" class="mode">Previsión detallada</button></div>
+</div>
 <div id="charts"></div>
 <div class="hint">Cada bloque = 7 días; el siguiente empieza un día después · desliza con el dedo ← → · toca una hora</div>
 <div id="tip"></div>
