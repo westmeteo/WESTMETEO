@@ -188,14 +188,24 @@ function drawChart(cid, s, endIdx){
     defs.insertAdjacentHTML('beforeend',`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${gw0}" y1="0" x2="${gw1}" y2="0">${st}</linearGradient>`);
     return id;};
 
-  // NUBES por altitud (perfil de presión ECMWF): una lámina por nivel, fina arriba (cirros) y más gruesa abajo (decks)
+  // NUBES por altitud (perfil de presión ECMWF)
   if(D.clev&&D.clev.length){
     const lev=D.clev.slice().sort((a,b)=>a.z-b.z);
     const zBase=0, zTop=Math.max(2600, lev[lev.length-1].z+800);
     const zY=z=>plotB-(z-zBase)/(zTop-zBase)*plotH;
-    const thick=z=>Math.max(9, 26-(z/12000)*17);   // ~26px cerca de superficie -> ~9px a 12 km
-    lev.forEach((l,k)=>{ const id=gradF(`cl${cid}_${k}`, j=>l.arr[G(j)]); if(!id)return; const y=zY(l.z), h=thick(l.z);
+    const thick=z=>Math.max(9, 26-(z/12000)*17);   // decks bajos gruesos, nubes medias algo más finas
+    const low=lev.filter(l=>l.z<6000), high=lev.filter(l=>l.z>=6000);
+    // bajo/medio (<6000 m): una lámina por nivel
+    low.forEach((l,k)=>{ const id=gradF(`cl${cid}_${k}`, j=>l.arr[G(j)]); if(!id)return; const y=zY(l.z), h=thick(l.z);
       svg.appendChild(el('rect',{x:gw0,y:(y-h/2).toFixed(1),width:(gw1-gw0),height:h.toFixed(1),fill:`url(#${id})`,filter:`url(#${fid})`})); });
+    // alto (>=6000 m): UNA lámina fina por hora, a la altura media ponderada; color = cobertura media
+    if(high.length){
+      const g=ns('g'); g.setAttribute('filter',`url(#${fid})`); svg.appendChild(g);
+      for(let j=0;j<nH;j++){ let sp=0,sz=0,cnt=0;
+        for(const l of high){ const c=l.arr[G(j)]; if(c==null||c<=0) continue; cnt++; sp+=c; sz+=(c/100)*l.z; }
+        if(!cnt) continue; const mc=sp/cnt, mz=sz/cnt; if(mc<=1) continue; const y=zY(mz);
+        g.appendChild(el('rect',{x:X(j),y:(y-5).toFixed(1),width:HOURW,height:10,fill:grisCover(mc),opacity:alphaCover(mc)})); }
+    }
     [2000,4000,6000,8000,10000].forEach(z=>{ if(z>zBase+300&&z<zTop-200){const y=zY(z);
       kmov.appendChild(el('text',{x:20,y:(y+2).toFixed(1),fill:'#60798f','font-size':7.2,'font-weight':700,'text-anchor':'middle',stroke:'#0c1a28','stroke-width':2.6,'paint-order':'stroke'},(z/1000)+' km')); }});
   }else if(D.ctot&&D.ctot.some(v=>v!=null)){
