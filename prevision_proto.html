@@ -29,6 +29,8 @@
   .mg-wrap svg{display:block}
   .axis{position:absolute;left:0;top:1px;pointer-events:none;background:linear-gradient(#0c1a28,#0f1f30);border-right:1px solid rgba(58,86,112,.35)}
   .kmaxis{position:absolute;left:50%;top:1px;transform:translateX(-50%);pointer-events:none}
+  .daystick{position:absolute;top:2px;pointer-events:none;white-space:nowrap;font:800 17px system-ui,sans-serif;
+            color:#eaf2f8;text-shadow:0 1px 2px #0c1a28;will-change:transform}
   .hint{color:var(--mut);font-size:11px;padding:8px 14px;text-align:center}
   #tip{position:fixed;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(10,20,32,.97);
        border:1px solid var(--azul);border-radius:12px;padding:14px 16px 12px;font-size:13px;color:var(--ink);
@@ -149,7 +151,7 @@ function pintarTodo(){
   const end7=Math.min(DATA.time.length, 7*24);
   const end15=Math.min(DATA.time.length, 15*24);
   drawChart(0, nowIdx, end15, true);                        // 1ª gráfica: desde AHORA
-  for(let k=1; k*24 < end7; k++) drawChart(k, k*24, end7, true);  // resto: desde las 00:00 de su día (sin saltar a horas centrales)
+  for(let k=1; k*24 < end7; k++) drawChart(k, k*24, end7, false);  // 2-7: ventana central (08:00), con cabecera pegajosa
   setFuente();
 }
 
@@ -163,7 +165,9 @@ function drawChart(cid, s, endIdx, fromStart){
   const svg=ns('svg'); wrap.appendChild(svg);
   const axis=ns('svg'); axis.setAttribute('class','axis');
   const kmov=ns('svg'); kmov.setAttribute('class','kmaxis'); kmov.setAttribute('width',40); kmov.setAttribute('height',Hsvg); kmov.setAttribute('viewBox',`0 0 40 ${Hsvg}`);
-  posic.appendChild(wrap); posic.appendChild(axis); posic.appendChild(kmov);
+  const stick=document.createElement('div'); stick.className='daystick'; stick.style.left=PADL+'px';
+  const dayHdr={};
+  posic.appendChild(wrap); posic.appendChild(stick); posic.appendChild(axis); posic.appendChild(kmov);
   box.appendChild(posic);
   document.getElementById('charts').appendChild(box);
 
@@ -240,12 +244,10 @@ function drawChart(cid, s, endIdx, fromStart){
       svg.appendChild(el('line',{x1:X(j),y1:42,x2:X(j),y2:plotB,stroke:'#49708f','stroke-width':1.2}));
       let tot=0,tmn=Infinity,tmx=-Infinity;
       for(let k=j;k<nH&&(D.time[G(k)].getDate()+'-'+D.time[G(k)].getMonth())===dk;k++){ tot+=PC[k]||0; const tv=D.temp[G(k)]; if(tv!=null){ if(tv<tmn)tmn=tv; if(tv>tmx)tmx=tv; } }
-      const th=el('text',{x:X(j)+6,y:25,fill:'#eaf2f8','font-size':17,'font-weight':800});
-      th.appendChild(el('tspan',{},`${DIAS[d.getDay()]} ${d.getDate()} ${capMes(d.getMonth())} `));
-      th.appendChild(el('tspan',{fill:'#7fc0ff','font-size':12,'font-weight':700},`(${tot.toFixed(1)}mm)`));
-      if(isFinite(tmn)){ th.appendChild(el('tspan',{dx:14,fill:'#8fd0ff','font-size':14,'font-weight':800},`mín ${Math.round(tmn)}°`));
-        th.appendChild(el('tspan',{dx:8,fill:'#ff6b6b','font-size':14,'font-weight':800},`máx ${Math.round(tmx)}°`)); }
-      svg.appendChild(th);
+      dayHdr[dk]=`${DIAS[d.getDay()]} ${d.getDate()} ${capMes(d.getMonth())} `+
+        `<span style="color:#7fc0ff;font-size:12px;font-weight:700">(${tot.toFixed(1)}mm)</span>`+
+        (isFinite(tmn)?`<span style="color:#8fd0ff;font-size:14px;margin-left:13px">mín ${Math.round(tmn)}°</span>`+
+                       `<span style="color:#ff6b6b;font-size:14px;margin-left:7px">máx ${Math.round(tmx)}°</span>`:'');
     }else svg.appendChild(el('line',{x1:X(j),y1:plotT,x2:X(j),y2:plotB,stroke:'#22384c','stroke-width':1}));
     svg.appendChild(el('text',{x:XC(j),y:52,fill:'#9ab2c8','font-size':9,'text-anchor':'middle'},String(hr).padStart(2,'0')+'h'));
   }
@@ -290,10 +292,20 @@ function drawChart(cid, s, endIdx, fromStart){
     svg.appendChild(el('line',{x1:xn,y1:plotT-6,x2:xn,y2:plotB,stroke:'#ffd166','stroke-width':1,'stroke-dasharray':'2 5',opacity:.45}));
     svg.appendChild(el('text',{x:xn+3,y:plotT+2,fill:'#ffd166','font-size':9,'font-weight':700},'ahora')); break; } }
 
-  // scroll inicial: la 1ª gráfica desde el inicio (ahora); las demás saltan a las 06:00
+  // cabecera de día PEGAJOSA (se queda fija y la empuja el día siguiente) + scroll inicial
+  function updateStick(){
+    const s=wrap.scrollLeft, jRef=Math.max(0, Math.min(nH-1, Math.ceil(s/HOURW)));
+    const d0=D.time[G(jRef)], dk0=d0.getDate()+'-'+d0.getMonth();
+    stick.innerHTML=dayHdr[dk0]||'';
+    let jN=nH; for(let j=jRef+1;j<nH;j++){ const dd=D.time[G(j)]; if(dd.getDate()+'-'+dd.getMonth()!==dk0){ jN=j; break; } }
+    const gap=(X(jN)-s)-PADL, w=stick.offsetWidth||160;
+    stick.style.transform='translateX('+Math.min(0, gap-w).toFixed(0)+'px)';
+  }
+  wrap.addEventListener('scroll', updateStick, {passive:true});
   requestAnimationFrame(()=>{
     if(fromStart){ wrap.scrollLeft=0; }
-    else { let j6=0; for(let j=0;j<nH;j++){ if(D.time[G(j)].getHours()>=6){j6=j;break;} } wrap.scrollLeft=Math.max(0, X(j6)-6); }
+    else { let j8=0; for(let j=0;j<nH;j++){ if(D.time[G(j)].getHours()>=8){j8=j;break;} } wrap.scrollLeft=Math.max(0, X(j8)-6); }
+    updateStick();
   });
 
   // tooltip (toca una hora)
