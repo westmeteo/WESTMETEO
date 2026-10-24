@@ -81,7 +81,7 @@ const RUMBOS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O'
 const MAX_CHARTS=6;
 
 /* ===== geometría ===== */
-const HOURW=46, PADL=56, PADR=20, TOP=64, BOT=46, Hsvg=360;
+const HOURW=46, PADL=56, PADR=20, TOP=64, BOT=66, Hsvg=384;
 const plotT=TOP, plotB=Hsvg-BOT, plotH=plotB-plotT;
 
 const sel=document.getElementById('sel'), tip=document.getElementById('tip');
@@ -221,10 +221,8 @@ function drawChart(cid, s, endIdx, fromStart){
   tks(tmin,tmax,4).forEach(v=> svg.appendChild(el('line',{x1:PADL,y1:tY(v),x2:gw1,y2:tY(v),stroke:'#2a3f54','stroke-width':1,opacity:.45})));
   axis.setAttribute('width',PADL); axis.setAttribute('height',Hsvg); axis.setAttribute('viewBox',`0 0 ${PADL} ${Hsvg}`);
   const aEl=(t,a,x)=>{const e=ns(t);for(const k in a)e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;axis.appendChild(e);};
-  aEl('text',{x:18,y:plotT-6,fill:'var(--temp)','font-size':9,'font-weight':800,'text-anchor':'middle'},'°C');
-  aEl('text',{x:44,y:plotT-6,fill:'var(--viento)','font-size':9,'font-weight':800,'text-anchor':'middle'},'km/h');
-  tks(tmin,tmax,4).forEach(v=> aEl('text',{x:28,y:tY(v)+3,fill:'var(--temp)','font-size':10,'font-weight':700,'text-anchor':'end'},Math.round(v)+'°'));
-  tks(0,wmax,4).forEach(v=>{ if(v<=0)return; aEl('text',{x:PADL-3,y:wY(v)+3,fill:'var(--viento)','font-size':10,'font-weight':700,'text-anchor':'end'},Math.round(v)); });
+  aEl('text',{x:PADL-4,y:plotT-6,fill:'var(--temp)','font-size':9,'font-weight':800,'text-anchor':'end'},'°C');
+  tks(tmin,tmax,4).forEach(v=> aEl('text',{x:PADL-4,y:tY(v)+3,fill:'var(--temp)','font-size':10,'font-weight':700,'text-anchor':'end'},Math.round(v)+'°'));
 
   // rejilla vertical + horas + días
   let dAnt='';
@@ -240,7 +238,7 @@ function drawChart(cid, s, endIdx, fromStart){
         th.appendChild(el('tspan',{fill:'#ff6b6b','font-size':14,'font-weight':800},` ${Math.round(tmx)}°`)); }
       svg.appendChild(th);
     }else svg.appendChild(el('line',{x1:X(j),y1:plotT,x2:X(j),y2:plotB,stroke:'#22384c','stroke-width':1}));
-    svg.appendChild(el('text',{x:XC(j),y:Hsvg-28,fill:'#9ab2c8','font-size':10,'text-anchor':'middle'},String(hr).padStart(2,'0')));
+    svg.appendChild(el('text',{x:XC(j),y:plotB+56,fill:'#9ab2c8','font-size':10,'text-anchor':'middle'},String(hr).padStart(2,'0')));
   }
   svg.appendChild(el('line',{x1:PADL,y1:plotB,x2:gw1,y2:plotB,stroke:'#49708f','stroke-width':1}));
 
@@ -249,9 +247,14 @@ function drawChart(cid, s, endIdx, fromStart){
     svg.appendChild(el('rect',{x:X(j)+6,y:plotB-h,width:HOURW-12,height:h,rx:2,fill:'var(--lluvia)',opacity:.6}));
     if(cor>=0.5) svg.appendChild(el('text',{x:XC(j),y:plotB-h-3,fill:'#bfe0ff','font-size':9,'font-weight':700,'text-anchor':'middle',stroke:'#0c1a28','stroke-width':2.4,'paint-order':'stroke'},cor.toFixed(1))); }
 
-  // flechas de viento (grandes)
-  for(let j=0;j<nH;j+=2){ const dr=D.dir[G(j)]; if(dr==null)continue;
-    svg.appendChild(el('text',{x:XC(j),y:53,fill:'#5fe0c0','font-size':17,'font-weight':700,'text-anchor':'middle',transform:`rotate(${dr+180} ${XC(j)} 48)`},'↑')); }
+  // viento bajo el plot (entre el plot y la hora): cuadrito con flecha + velocidad + procedencia, por hora
+  const R8=['N','NE','E','SE','S','SW','W','NW'];
+  for(let j=0;j<nH;j++){ const v=D.wind[G(j)], dr=D.dir[G(j)]; if(v==null) continue; const cx=XC(j);
+    svg.appendChild(el('rect',{x:cx-8,y:plotB+3,width:16,height:16,rx:3,fill:'none',stroke:'#2f4b63','stroke-width':1}));
+    if(dr!=null) svg.appendChild(el('text',{x:cx,y:plotB+16,fill:'#5fe0c0','font-size':14,'font-weight':700,'text-anchor':'middle',transform:`rotate(${dr+180} ${cx} ${plotB+11})`},'↑'));
+    svg.appendChild(el('text',{x:cx,y:plotB+31,fill:'#dff5ee','font-size':10,'font-weight':700,'text-anchor':'middle'},Math.round(v)));
+    if(dr!=null) svg.appendChild(el('text',{x:cx,y:plotB+43,fill:'#5fe0c0','font-size':9,'font-weight':700,'text-anchor':'middle'},R8[Math.round(dr/45)%8]));
+  }
 
   // líneas de viento (+racha) y temperatura
   const pw=f=>{let sp='';for(let j=0;j<nH;j++){const v=D[f][G(j)];if(v==null)continue;sp+=(sp?'L':'M')+XC(j)+' '+wY(v).toFixed(1)+' ';}return sp;};
