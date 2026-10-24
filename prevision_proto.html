@@ -416,9 +416,8 @@ function syncLeg(){ legBtns.forEach(b=>b.classList.toggle('off', !VISI[b.dataset
 legBtns.forEach(b=>{ const k=b.dataset.k; b.addEventListener('click',()=>{ VISI[k]=!VISI[k]; b.classList.toggle('off',!VISI[k]); if(DATA) pintarTodo(); }); });
 syncLeg();
 document.getElementById('foot').innerHTML =
-  'Prototipo de nueva Previsión (meteograma apilado). Solo los 7 primeros días: el primer bloque es la semana completa y cada bloque de abajo empieza un día después (el último, solo 24 h). '+
-  '<b>AROME</b> mientras cubre (primeras ~48 h), luego <b>ECMWF</b>. Lluvia con corrección <b>WM1.0</b> (realce solo con flujo del <b>S/SO/O</b>). '+
-  'Nubes por altitud desde el perfil de presión de ECMWF. No es fuente oficial; contrasta con AEMET.';
+  'Previsión elaborada a partir del estudio microclimático del Sistema Central y el oeste peninsular. '+
+  'No constituye una fuente meteorológica oficial; para la predicción y los avisos oficiales, consulte AEMET.';
 cargar();
 </script>
 </body>
